@@ -3,8 +3,8 @@
 Documentation pipeline state for **Open Local Assistant** (`local-ai-assistant` v1.2.2).
 
 - **Repository root:** `I:\Development\repos\Open-Local-Ai-Assistant`
-- **Tracked files (git):** 233
-- **Analysable source / config / doc files:** 169
+- **Tracked files (git):** 234
+- **Analysable source / config / doc files:** 170
 - **Binary assets (excluded from line-level analysis):** 64
 - **Documentation language:** English (100%)
 - **Started:** 2026-09-27T21:50:21Z
@@ -271,13 +271,14 @@ coverage completeness but are **not** deep-analysed: they carry no code semantic
 - `/src-tauri/icons/android/values/ic_launcher_background.xml`
 - `/src-tauri/models/` sample `.onnx` model file
 
-### 18. Release Notes (5)
+### 18. Release Notes (6)
 
 - `/release-notes/v0.1.0.md`
 - `/release-notes/v1.0.0.md`
 - `/release-notes/v1.1.0.md`
 - `/release-notes/v1.2.0.md`
 - `/release-notes/v1.2.1.md`
+- `/release-notes/v1.2.2.md`
 
 ---
 
@@ -335,9 +336,9 @@ coverage completeness but are **not** deep-analysed: they carry no code semantic
 
 ### 17. Binary Assets (64) — INVENTORIED (excluded from line analysis)
 
-### 18. Release Notes (5) — COMPLETE
+### 18. Release Notes (6) — COMPLETE
 `release-notes/v0.1.0.md`, `release-notes/v1.0.0.md`, `release-notes/v1.1.0.md`,
-`release-notes/v1.2.0.md`, `release-notes/v1.2.1.md`
+`release-notes/v1.2.0.md`, `release-notes/v1.2.1.md`, `release-notes/v1.2.2.md`
 
 ---
 
@@ -417,3 +418,4 @@ coverage completeness but are **not** deep-analysed: they carry no code semantic
 - [2026-11-21T17:10:00Z] Models download folder is now user-selectable so ONNX models can be shared with other apps instead of downloaded again. New setting `stt.modelsDir` (`""` = `<data>\models`) and IPC command `models_set_dir` (95 commands): refuses during a model download or voice session, unloads STT/TTS, then `ModelStore::relocate` moves installed catalogue models (rename or cross-drive copy + delete), reuses complete copies already in the target, refuses same-named foreign folders, and rolls back on failure. `ModelStore.dir` is now an `RwLock` behind `dir()`; `delete` accepts only catalogue ids; `download::install` will not replace a foreign same-named folder; `save_settings` and backup import keep the current `modelsDir`; `app_info`/`open_folder` report the current folder. Settings > Voice > Model folders gains Change…/Use default. Specs: `api_reference.md`, `catalog.txt`, `relationships.txt`, `data_models.txt`, `full_documentation.md`, `diagrams/classes.mmd`, this log. No files added, so the Files Processed inventory is unchanged.
 - [2026-11-21T17:40:00Z] Catalogue models are now grouped by kind inside the models folder: `<models>/stt/<id>`, `<models>/tts/<id>`, `<models>/vad/<id>` (`ModelKind::folder`, `KIND_FOLDERS`, private `model_path`). `ModelStore::new` runs `migrate_flat_layout`, moving older flat `<models>/<id>` installs into their kind folder; `relocate`, `download::install` (creates the kind folder before the final rename) and `install_bundled` use the new layout; the scan skips catalogue folders at both slots. New test `flat_models_from_older_versions_move_into_kind_folders`; `cargo test` = 183 lib passed. Specs: `data_models.txt`, `catalog.txt`, `relationships.txt`, `full_documentation.md`, `diagrams/sequence.mmd`, this log. No files added, so the Files Processed inventory is unchanged.
 - [2026-11-21T18:30:00Z] Bumped the application version to 1.2.2 in `package.json`, `package-lock.json` (root and `packages[""]`), `src-tauri/Cargo.toml`, `src-tauri/Cargo.lock` (rewritten by cargo) and `src-tauri/tauri.conf.json`; synchronized current-version spec headers and the current-version line in `full_documentation.md`. No `release-notes/v1.2.2.md` yet, so a CI release would use GitHub-generated notes. File counts unchanged.
+- [2026-11-21T18:45:00Z] Added `release-notes/v1.2.2.md` covering the selectable, shareable models download folder and the `stt` / `tts` / `vad` kind sub-folders with automatic migration. Section 18 (Release Notes) 5 -> 6 in both "Files to Process" and "Files Processed" (COMPLETE), tracked/analysable file counts +1, and the release-notes entry in `full_documentation.md` extended, so the counters for this section still agree.

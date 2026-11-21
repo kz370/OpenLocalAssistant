@@ -1386,13 +1386,13 @@ Gemini, Hugging Face, SearXNG (own instance), searx.space (public instance
 list), DuckDuckGo, GitHub, NVIDIA, plus user-configured MCP servers. Each
 third-party privacy policy is linked explicitly.
 
-#### File: `/release-notes/v0.1.0.md`, `/release-notes/v1.0.0.md`, `/release-notes/v1.1.0.md`, `/release-notes/v1.2.0.md` and `/release-notes/v1.2.1.md`
+#### File: `/release-notes/v0.1.0.md`, `/release-notes/v1.0.0.md`, `/release-notes/v1.1.0.md`, `/release-notes/v1.2.0.md`, `/release-notes/v1.2.1.md` and `/release-notes/v1.2.2.md`
 
 ### Purpose
 Published release notes.
 
 ### Summary
-27, 29, 33, 27 and 24 lines. Each states the version, licence and provider
+27, 29, 33, 27, 24 and 25 lines. Each states the version, licence and provider
 requirements, names the download artefacts, and repeats the not-code-signed
 SmartScreen guidance with the `Get-FileHash` verification instruction.
 
@@ -1415,6 +1415,10 @@ name and `tauri.conf.json` must agree with it.
 guidance and expandable backend detail; it does not claim to fix device or
 driver startup failures. It also documents the automated Windows release checks,
 portable package, and SHA-256 checksum asset.
+`v1.2.2` adds the user-selectable, shareable models download folder
+(`models_set_dir`) and the `stt` / `tts` / `vad` kind sub-folders with automatic
+migration of older flat installs; it states that the app never deletes or
+overwrites models it did not download.
 
 #### File: `/src-tauri/icons/android/mipmap-anydpi-v26/ic_launcher.xml` and `/src-tauri/icons/android/values/ic_launcher_background.xml`
 
