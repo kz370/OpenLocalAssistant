@@ -3,7 +3,7 @@
 **Project:** Open Local Assistant (`local-ai-assistant` v1.2.1)
 **Transport:** Tauri 2 IPC
 **Scope:** the complete contract between the React frontend (`src/`) and the Rust
-backend (`src-tauri/src/`) — 94 commands, 18 global events, 2 streaming channels,
+backend (`src-tauri/src/`) — 95 commands, 18 global events, 2 streaming channels,
 16 error codes.
 
 > Companion documents: [`full_documentation.md`](./full_documentation.md) (per-file
@@ -24,7 +24,7 @@ backend (`src-tauri/src/`) — 94 commands, 18 global events, 2 streaming channe
    - [3.5 Attachments (6)](#35-attachments-6)
    - [3.6 Conversations (9)](#36-conversations-9)
    - [3.7 Voice (23)](#37-voice-23)
-   - [3.8 Models (6)](#38-models-6)
+   - [3.8 Models (7)](#38-models-7)
    - [3.9 GPU pack (5)](#39-gpu-pack-5)
    - [3.10 Models in memory (3)](#310-models-in-memory-3)
    - [3.11 MCP &amp; web search (13)](#311-mcp--web-search-13)
@@ -49,7 +49,7 @@ Three IPC mechanisms are in use:
 
 | Mechanism | Tauri's name | Used for |
 | --- | --- | --- |
-| **Request / response** | `invoke(cmd, args)` ⇄ `#[tauri::command]` | All 94 commands. The command resolves with the return value, or rejects with an `AppError` serialised as `{code, detail}`. |
+| **Request / response** | `invoke(cmd, args)` ⇄ `#[tauri::command]` | All 95 commands. The command resolves with the return value, or rejects with an `AppError` serialised as `{code, detail}`. |
 | **Channel (bidirectional push, per invocation)** | `Channel<T>` from `@tauri-apps/api/core` | Exactly two commands: `chat_send` and `chat_explain`. A `Channel` belongs to **one** invocation; it is created by the caller and handed to Rust as an argument, so events cannot leak between turns or windows. |
 | **Global event (broadcast)** | `app.emit(name, payload)` ⇄ `listen(name, cb)` | 18 names. Any window may listen; `emit_to(label, …)` targets one window (used for `app://*` and for the overlay's dictation telemetry). |
 
@@ -162,7 +162,7 @@ oversight.
 
 ## 3. Commands
 
-All 94 commands, grouped **exactly** as in `src/app/ipc.ts`, which is the authoritative
+All 95 commands, grouped **exactly** as in `src/app/ipc.ts`, which is the authoritative
 grouping. Every command appears in `tauri::generate_handler![ … ]` in `lib.rs`, 1:1.
 
 Conventions used in the tables:
@@ -187,7 +187,7 @@ Conventions used in the tables:
 | 2 | `save_settings` | `settings: Settings` | `Settings` | **async.** Sanitises server-side, persists, then fires only the side effects whose values actually changed (provider/base URL/API key → `resolver.invalidate()`; extra model dirs → `models://changed`; STT model/silence/hardware → `reload_stt`; voice hardware → unload all voices; output device/volume → `tts.apply_settings`; preload on → warm-up; any shortcut → re-register; start-with-OS → registry; always-on-top; window position; accent → re-tint the tray/taskbar icon). Returns the **authoritative** sanitised document. Emits `settings://changed`. |
 | 3 | `shortcut_errors` | — | `string[]` | sync. Global-shortcut registration failures collected at startup and on every re-register. **Never fatal** — the app starts with a taken hotkey. |
 | 4 | `shortcuts_capture` | `capturing: boolean`, `reviewShortcuts?: boolean` | `void` | sync. `true` unregisters configured shortcuts so the recorder's keypresses are not swallowed; with `reviewShortcuts: true`, globally registers Ctrl+Enter (insert), Ctrl+Shift+Enter (retry), and Ctrl+Shift+Backspace (cancel) while review is open. `false` re-registers configured shortcuts. |
-| 5 | `app_info` | — | `AppInfo` | sync. `{ version, paths: { dataDir, modelsDir, logsDir, database }, hardware, os }`. |
+| 5 | `app_info` | — | `AppInfo` | sync. `{ version, paths: { dataDir, modelsDir, logsDir, database }, hardware, os }`. `modelsDir` is the **current** download folder (`ModelStore::dir()`), which may be a user-chosen shared folder. |
 | 6 | `open_folder` | `which: "logs" \| "models" \| "data"` | `void` | sync. Strict allow-list; anything else is `invalid: "unknown folder"`. Creates the directory if missing, then opens it with the platform opener (`explorer` / `open` / `xdg-open`). |
 | 7 | `read_log_tail` | `lines?: number` | `string` | sync. Last lines of **today's** log. Default **200**, hard cap **2000**. Only `*.log` files are considered; the newest is chosen by lexicographic sort. Empty string when there is no log yet. |
 | 8 | `scan_capabilities` | — | `CapabilityReport` | **async.** One snapshot of LM Studio, hardware, voice, microphones, outputs and MCP. **Never fails** because LM Studio is down — the failure is encoded in `lmStudio.errorCode` / `errorDetail`. Drives the setup wizard. |
@@ -299,7 +299,7 @@ API.
 
 ---
 
-### 3.8 Models (6)
+### 3.8 Models (7)
 
 | # | Command | Parameters | Returns | Notes |
 | --- | --- | --- | --- | --- |
@@ -308,7 +308,8 @@ API.
 | 70 | `models_incompatible` | — | `IncompatibleModel[]` | sync. Folders found in **extra** folders only that have no `.onnx` but do have PyTorch weights (`.safetensors` / `.pt` / `.pth` / `.ckpt` / `pytorch_model.bin`) or `.gguf`. Each carries a **reason** — "GGUF models run in LM Studio, not in the local speech engine" or "PyTorch weights: this app needs an ONNX export (sherpa-onnx format)" — so they are listed, not silently hidden. |
 | 71 | `models_download` | `ids: string[]` | `void` | **async. Fire-and-forget.** All-or-nothing on validation: one unknown id aborts the whole batch with `invalid: "unknown model id"`. Then every not-yet-installed model is **reserved with a `CancellationToken` immediately** and `models://changed` is emitted, so the UI greys them out as queued at once and they cannot be selected twice. The actual work is one spawned task installing models **sequentially**. Per model: skip if already installed, treat a missing token as "cancelled before it started", emit `models://download` per tick, release the reservation, and on success **reload STT if a model is loaded** (a new model may now be the automatic pick). Every file is SHA-256 verified. |
 | 72 | `models_cancel` | `id: string` | `void` | sync. Cancels a queued or in-flight download via its token. A cancelled download reports `models://download { state: "cancelled" }` and cleans up the staging directory. |
-| 73 | `models_delete` | `id: string` | `void` | sync. `invalid: "built-in models cannot be deleted"` for a protected id. If the deleted model is the **loaded STT model** it is unloaded **first** (its files are in use), then deleted, then STT is reloaded so speech keeps working without a wait. Ids containing `/`, `\` or `..` are rejected and the resolved path must stay inside the models directory, so models in **extra folders are never removed by the app**. Emits `models://changed`. |
+| 73 | `models_delete` | `id: string` | `void` | sync. `invalid: "built-in models cannot be deleted"` for a protected id. If the deleted model is the **loaded STT model** it is unloaded **first** (its files are in use), then deleted, then STT is reloaded so speech keeps working without a wait. Ids containing `/`, `\` or `..` are rejected and the resolved path must stay inside the models directory, so models in **extra folders are never removed by the app**. Only **catalogue ids** can be deleted (`invalid model id` otherwise), so a hand-placed or another app's model in a shared download folder is never removed. Emits `models://changed`. |
+| 73a | `models_set_dir` | `dir: string \| null` | `string` | **async.** Changes the folder catalogue models are downloaded to (`null`/empty = `<data>\models`) so several apps can share one copy, and returns the folder now in use. Rejects a relative path, a running model download and an active voice session (`invalid`). Unloads STT and all TTS voices (files are held open), then `ModelStore::relocate` on a blocking thread: every catalogue model with a `.complete` marker is moved (rename, or copy via a hidden `.moving-<id>` folder + delete across drives); a model already complete in the target is reused and the old copy removed; a same-named target folder without a marker aborts the whole change before anything moves; a failure mid-way moves already-moved models back and keeps the old folder (`io: "the models folder was not changed: …"`). On success writes `stt.modelsDir`, re-installs the bundled VAD, reloads STT if it was loaded, emits `models://changed` and `settings://changed`. Hand-placed models stay in the old folder. |
 
 ---
 
@@ -583,7 +584,7 @@ await invoke("tts_stop");                            // stops everything
 | `dictation://state` | `DictationStateEvent` | `src/lib.rs` (`run_dictation`, `insert_and_report`, `confirm_review`, `on_voice_event`) | `src/pages/Overlay/Overlay.tsx`, `src/pages/Bubble/Bubble.tsx`, `src/pages/Chat/ChatApp.tsx` | `{ state, text?, error?, result? }` with `state` ∈ `listening \| transcribing \| idle \| correcting \| review \| inserted \| empty \| cancelled \| error`. `error` is an `AppErrorPayload`; `result` is `{ raw, inserted, corrected, correctionError }`. **A late `idle` after an Esc-cancel is reported as `cancelled`, never `idle`.** |
 | `dictation://history` | `null` (empty) | `src/lib.rs::insert_and_report` | `src/pages/Settings/sections/Dictation.tsx` | **No payload** — a bare `()`. Purely a "reload the list" signal. Only emitted when the write to history succeeded. |
 | `models://download` | `DownloadProgress` | `src-tauri/src/commands/voice.rs` (`models_download` progress callback) | `src/components/settings/ModelManager.tsx`, `src/pages/Setup/SetupWizard.tsx` | `{ modelId, state, downloadedBytes, totalBytes, error }`, `state` ∈ `downloading \| verifying \| extracting \| done \| error \| cancelled`. Emitted at most every **250 ms**. The `verifying` state is where SHA-256 comparison happens. |
-| `models://changed` | `null` (empty) | `commands/app.rs` (`save_settings`, extra model dirs), `commands/voice.rs` (`models_download`, `models_delete`) | `src/components/settings/ModelManager.tsx`, `src/pages/Settings/sections/Voice.tsx` | **No payload.** Fires when the catalogue/installed set, the recommendation or the download reservations change. |
+| `models://changed` | `null` (empty) | `commands/app.rs` (`save_settings`, extra model dirs), `commands/voice.rs` (`models_download`, `models_delete`, `models_set_dir`) | `src/components/settings/ModelManager.tsx`, `src/pages/Settings/sections/Voice.tsx` | **No payload.** Fires when the catalogue/installed set, the recommendation or the download reservations change. |
 | `gpu://changed` | `null` (empty) | `commands/voice.rs` (`gpu_set_enabled`, `gpu_install`, `gpu_remove`) | `src/components/settings/GpuCard.tsx`, `src/pages/Settings/sections/Voice.tsx` | **No payload.** Also emitted at the end of `gpu_install`. |
 | `gpu://download` | `GpuProgress` | `commands/voice.rs` (`gpu_install` progress callback) | `src/components/settings/GpuCard.tsx` | `{ state, downloadedBytes, totalBytes, error }`, `state` ∈ `downloading \| extracting \| done \| error \| cancelled`. Note there is **no `verifying`** state — the pack archives are not digest-pinned. |
 | `memory://changed` | `null` (empty) | `commands/memory.rs` (`tracked()` before and after each load, `memory_unload`) | `src/pages/Settings/sections/Memory.tsx` | **No payload.** Emitted **before** awaiting a load as well as after, so the UI shows a spinner immediately. That page also polls every 3 s as a safety net. |

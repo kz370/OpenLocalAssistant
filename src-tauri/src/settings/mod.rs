@@ -322,6 +322,9 @@ pub struct SttSettings {
     pub silence_ms: u32,
     /// Extra folders scanned for speech/voice models (read-only).
     pub extra_model_dirs: Vec<String>,
+    /// Folder catalog models are downloaded to; empty = `<app data>/models`.
+    /// Changed only through `models_set_dir`, which moves the models too.
+    pub models_dir: String,
     /// Show hands-free conversation as a call screen.
     pub call_view: bool,
     /// Stop a recording after this much silence (seconds, 0 = never).
@@ -343,6 +346,7 @@ impl Default for SttSettings {
             vad_threshold: 0.6,
             silence_ms: 800,
             extra_model_dirs: Vec::new(),
+            models_dir: String::new(),
             call_view: true,
             auto_stop_silence_secs: 8,
             hands_free_timeout_secs: 300,
@@ -743,6 +747,7 @@ impl Settings {
             .filter(|d| !d.is_empty())
             .collect();
         self.stt.extra_model_dirs.dedup();
+        self.stt.models_dir = self.stt.models_dir.trim().to_string();
         if self.stt.auto_stop_silence_secs != 0 {
             self.stt.auto_stop_silence_secs = self.stt.auto_stop_silence_secs.clamp(2, 120);
         }

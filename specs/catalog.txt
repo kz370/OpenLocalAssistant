@@ -182,6 +182,7 @@ commands/voice.rs :: models_incompatible — SYNC `(state) -> Vec<IncompatibleMo
 commands/voice.rs :: models_download — ASYNC `(app, state, ids) -> CmdResult<()>` — all-or-nothing validation, then reserve every id and install sequentially in one spawned task.
 commands/voice.rs :: models_cancel — SYNC `(state, id) -> ()` — cancels the reservation's `CancellationToken`.
 commands/voice.rs :: models_delete — SYNC `(app, state, id) -> CmdResult<()>` — refuses protected models; unloads the STT model first when needed, then reloads STT.
+commands/voice.rs :: models_set_dir — ASYNC `(app, state, dir: Option<String>) -> CmdResult<String>` — switches the download folder (shared with other apps), moving installed catalogue models via `ModelStore::relocate`; refuses while a model download or voice session runs.
 commands/voice.rs :: gpu_status — SYNC `(state) -> GpuStatus` — supported, installed, active, restart-required.
 commands/voice.rs :: gpu_set_enabled — SYNC `(app, state, enabled) -> CmdResult<()>` — writes the flag; takes effect only after a restart.
 commands/voice.rs :: gpu_install — ASYNC `(app, state) -> CmdResult<()>` — requires an NVIDIA GPU, is idempotent, and auto-enables the pack on success.
@@ -371,10 +372,15 @@ services/models/mod.rs :: Recommendation — `{ stt, vad, tts }`; the starter se
 services/models/mod.rs :: Recommendation::ids — The three catalogue ids as `Vec<&'static str>`.
 services/models/mod.rs :: recommend — `pub fn recommend(_hw: &HardwareInfo) -> Recommendation`; the hardware argument is deliberately ignored.
 services/models/mod.rs :: ModelStore — Owns the models directory, the extra directories and the bundled-VAD installation.
-services/models/mod.rs :: ModelStore::new / set_extra_dirs / extra_dirs / model_dir — Layout and extra-directory management.
+services/models/mod.rs :: ModelStore::new / dir / set_extra_dirs / extra_dirs / model_dir — Layout and extra-directory management; `dir` is behind an `RwLock` so it can change at runtime.
+services/models/mod.rs :: ModelStore::relocate — Moves every installed catalogue model to a new download folder (rename or copy+delete), reuses complete copies already there, refuses same-named foreign folders, rolls back on failure.
+services/models/mod.rs :: move_dir / copy_dir / same_path / non_empty — Private helpers for relocate and the download foreign-folder guard.
+services/models/mod.rs :: model_path — `<root>/<kind>/<id>` for catalogue ids (`stt`, `tts`, `vad`), `<root>/<id>` otherwise; backs `ModelStore::model_dir`.
+services/models/mod.rs :: migrate_flat_layout — Called by `ModelStore::new`; moves flat `<root>/<id>` catalogue installs (with `.complete`) into their kind folder, dropping a flat duplicate.
+services/models/catalog.rs :: ModelKind::folder / KIND_FOLDERS — Kind sub-folder names `stt` / `tts` / `vad`.
 services/models/mod.rs :: ModelStore::is_installed / installed / find_installed / incompatible — Discovery of catalogue, custom, extra-folder and unusable models.
 services/models/mod.rs :: ModelStore::install_bundled — Writes the embedded `silero_vad.onnx` plus a `.complete` marker; idempotent and never downloaded.
-services/models/mod.rs :: ModelStore::delete — Traversal-protected delete; only models inside the app's own folder can be removed.
+services/models/mod.rs :: ModelStore::delete — Traversal-protected delete; only catalogue models inside the download folder can be removed.
 services/models/mod.rs :: IncompatibleModel — `{ name, path, reason }`; GGUF or PyTorch weights in an extra folder.
 services/models/mod.rs :: display_name — Resolves the Hugging Face cache layout to a friendly `org/name`.
 services/models/mod.rs :: detect_custom — Recognises a model folder by its files: VAD, Supertonic, Kitten/Kokoro, Piper, then STT.
@@ -498,7 +504,7 @@ settings/mod.rs :: AiSettings — 22 fields: provider, serverUrl, apiKey, provid
 settings/mod.rs :: ProviderProfile — `{ serverUrl, apiKey, model, modelMode }`; remembered per non-selected provider.
 settings/mod.rs :: LanguageSettings — `{ responseLanguage, entries, arabicTashkeelEnabled, arabicTashkeelInstruction }`.
 settings/mod.rs :: LanguageEntry — `{ code, displayName, direction, sttLanguage, ttsVoice, builtIn }`.
-settings/mod.rs :: SttSettings — 14 fields: model, language, microphone, hardware, autoSubmit, handsFree, pushToTalk, vadThreshold, silenceMs, extraModelDirs, callView, autoStopSilenceSecs, handsFreeTimeoutSecs.
+settings/mod.rs :: SttSettings — 15 fields: model, language, microphone, hardware, autoSubmit, handsFree, pushToTalk, vadThreshold, silenceMs, extraModelDirs, modelsDir, callView, autoStopSilenceSecs, handsFreeTimeoutSecs.
 settings/mod.rs :: TtsSettings — 11 live fields: speakResponses, speed, volume, outputDevice, preferredGender, voiceHardware, speakAfterReply, expressiveSounds, expressiveInstruction, plus the three legacy `voiceEn`/`voiceAr`/`voiceDe` fields kept only for the v4 migration.
 settings/mod.rs :: DictationSettings — 15 fields: enabled, shortcut, mode, correctionEnabled, correctionModel, insertMethod, addTrailingSpace, language, reviewBeforeInsert, historyEnabled, overlayX, overlayY, profiles, profileSearchThreshold, activeProfile.
 settings/mod.rs :: DictationProfile — `{ id, title, prompt }`: the title the overlay pill shows and the prompt appended to the built-in correction prompt.

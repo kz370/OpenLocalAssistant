@@ -466,3 +466,77 @@ pub fn models_delete(app: AppHandle, state: State<'_, AppState>, id: String) -> 
     let _ = app.emit("models://changed", ());
     Ok(())
 }
+
+/// Changes the folder models are downloaded to and moves the models this app
+/// installed there, so several apps can share one copy. `None` (or empty)
+/// goes back to the app's own folder. Returns the folder now in use.
+#[tauri::command]
+pub async fn models_set_dir(
+    app: AppHandle,
+    state: State<'_, AppState>,
+    dir: Option<String>,
+) -> CmdResult<String> {
+    let custom = dir.map(|d| d.trim().to_string()).unwrap_or_default();
+    let target = if custom.is_empty() {
+        state.paths.models_dir.clone()
+    } else {
+        let p = std::path::PathBuf::from(&custom);
+        if !p.is_absolute() {
+            return Err(AppError::Invalid(format!(
+                "\"{custom}\" is not a full folder path; pick the folder with the folder picker"
+            )));
+        }
+        p
+    };
+    let downloading = state
+        .downloads
+        .lock()
+        .unwrap_or_else(|p| p.into_inner())
+        .keys()
+        .any(|k| k != GPU_DOWNLOAD);
+    if downloading {
+        return Err(AppError::Invalid(
+            "a model download is still running; wait for it to finish or cancel it, then change the folder".into(),
+        ));
+    }
+    if state.voice.active_mode().is_some() {
+        return Err(AppError::Invalid(
+            "the microphone is in use; stop listening, then change the folder".into(),
+        ));
+    }
+    // Loaded models hold their files open; release them before moving.
+    let stt_was_loaded = state.stt.loaded_model().is_some();
+    state.stt.unload();
+    state.tts.stop_all();
+    for id in state.tts.loaded_models() {
+        state.tts.unload_model(&id);
+    }
+    let store = state.models.clone();
+    let moved = tokio::task::spawn_blocking({
+        let target = target.clone();
+        move || store.relocate(&target)
+    })
+    .await
+    .map_err(|e| AppError::Other(e.to_string()))?;
+    let result = match moved {
+        Ok(n) => {
+            if let Err(e) = state.models.install_bundled() {
+                tracing::warn!(error = %e, "could not install the bundled VAD model");
+            }
+            tracing::info!(moved = n, "models folder switched");
+            state
+                .settings
+                .update(|s| s.stt.models_dir = custom.clone())
+                .map(|_| state.models.dir().to_string_lossy().to_string())
+        }
+        Err(e) => Err(AppError::Io(format!(
+            "the models folder was not changed: {e}"
+        ))),
+    };
+    if stt_was_loaded {
+        super::memory::reload_stt(&app);
+    }
+    let _ = app.emit("models://changed", ());
+    let _ = app.emit("settings://changed", state.settings.get());
+    result
+}

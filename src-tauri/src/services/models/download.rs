@@ -28,8 +28,25 @@ pub async fn install(
     cancel: CancellationToken,
     on_progress: &(dyn Fn(DownloadProgress) + Send + Sync),
 ) -> AppResult<()> {
+    let root = store.dir();
     let dir = store.model_dir(model.id);
-    let staging = store.dir.join(format!(".staging-{}", model.id));
+    // In a folder shared with other apps, never replace a folder of the same
+    // name that this app did not install.
+    if dir.exists() && !dir.join(COMPLETE_MARKER).exists() && super::non_empty(&dir) {
+        let e = AppError::Invalid(format!(
+            "{} already exists in the models folder but was not installed by this app; rename or remove that folder, or pick another models folder in Settings",
+            dir.display()
+        ));
+        on_progress(DownloadProgress {
+            model_id: model.id.into(),
+            state: "error".into(),
+            downloaded_bytes: 0,
+            total_bytes: model.download_size(),
+            error: Some(e.to_string()),
+        });
+        return Err(e);
+    }
+    let staging = root.join(format!(".staging-{}", model.id));
     let _ = std::fs::remove_dir_all(&staging);
     std::fs::create_dir_all(&staging)?;
 
@@ -121,6 +138,9 @@ pub async fn install(
     match result {
         Ok(()) => {
             let _ = std::fs::remove_dir_all(&dir);
+            if let Some(kind_dir) = dir.parent() {
+                std::fs::create_dir_all(kind_dir)?;
+            }
             std::fs::rename(&staging, &dir)?;
             std::fs::write(
                 dir.join(COMPLETE_MARKER),

@@ -14,6 +14,21 @@ pub enum ModelKind {
     Tts,
 }
 
+impl ModelKind {
+    /// Sub-folder of the models folder that holds catalog models of this kind
+    /// (`<models>/stt/<id>`, `<models>/tts/<id>`, `<models>/vad/<id>`).
+    pub fn folder(self) -> &'static str {
+        match self {
+            ModelKind::Stt => "stt",
+            ModelKind::Vad => "vad",
+            ModelKind::Tts => "tts",
+        }
+    }
+}
+
+/// The kind sub-folders of the models folder.
+pub const KIND_FOLDERS: &[&str] = &["stt", "tts", "vad"];
+
 #[derive(Debug, Clone, Copy, Serialize, PartialEq, Eq)]
 #[serde(rename_all = "lowercase")]
 pub enum Engine {

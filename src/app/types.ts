@@ -89,6 +89,8 @@ export interface Settings {
     vadThreshold: number;
     silenceMs: number;
     extraModelDirs: string[];
+    /** Where catalog models are downloaded; "" = the app's own folder. Change via `modelsSetDir`. */
+    modelsDir: string;
     callView: boolean;
     autoStopSilenceSecs: number;
     handsFreeTimeoutSecs: number;

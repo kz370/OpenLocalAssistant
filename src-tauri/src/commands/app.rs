@@ -20,9 +20,12 @@ pub fn get_settings(state: State<'_, AppState>) -> Settings {
 pub async fn save_settings(
     app: AppHandle,
     state: State<'_, AppState>,
-    settings: Settings,
+    mut settings: Settings,
 ) -> CmdResult<Settings> {
     let before = state.settings.get();
+    // The models folder changes only through `models_set_dir` (it moves the
+    // files); a stale copy in the UI draft must not overwrite it.
+    settings.stt.models_dir = before.stt.models_dir.clone();
     let saved = state.settings.set(settings)?;
 
     if before.ai.provider != saved.ai.provider {
@@ -178,9 +181,11 @@ pub struct AppInfo {
 
 #[tauri::command]
 pub fn app_info(app: AppHandle, state: State<'_, AppState>) -> AppInfo {
+    let mut paths = state.paths.clone();
+    paths.models_dir = state.models.dir();
     AppInfo {
         version: app.package_info().version.to_string(),
-        paths: state.paths.clone(),
+        paths,
         hardware: state.hardware.clone(),
         os: std::env::consts::OS.into(),
     }
@@ -200,12 +205,12 @@ fn open_path(path: &std::path::Path) -> CmdResult<()> {
 #[tauri::command]
 pub fn open_folder(state: State<'_, AppState>, which: String) -> CmdResult<()> {
     let p = match which.as_str() {
-        "logs" => &state.paths.logs_dir,
-        "models" => &state.paths.models_dir,
-        "data" => &state.paths.data_dir,
+        "logs" => state.paths.logs_dir.clone(),
+        "models" => state.models.dir(),
+        "data" => state.paths.data_dir.clone(),
         _ => return Err(AppError::Invalid("unknown folder".into())),
     };
-    open_path(p)
+    open_path(&p)
 }
 
 /// Last lines of today's log file (technical details for Diagnostics).

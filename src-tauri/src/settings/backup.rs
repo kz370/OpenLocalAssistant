@@ -74,6 +74,9 @@ pub fn merge_import(current: &Settings, mut imported: Settings) -> Settings {
     imported.general.bubble_y = g.bubble_y;
     imported.dictation.overlay_x = current.dictation.overlay_x;
     imported.dictation.overlay_y = current.dictation.overlay_y;
+    // The models folder is a path on this computer and switching it moves
+    // files, so a backup never changes it.
+    imported.stt.models_dir = current.stt.models_dir.clone();
 
     // A key for provider P lives in `ai.api_key` when P is selected and in
     // `provider_profiles[P]` otherwise; look it up the same way on both sides.

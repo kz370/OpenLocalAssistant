@@ -1497,7 +1497,7 @@ feeding the next):
 3. `LmStudioService::new(&s.ai.server_url, s.ai.request_timeout_secs)`, then
    `set_provider` and `set_api_key`.
 4. `ModelResolver::with_hardware(lmstudio.clone(), hardware.clone())`.
-5. `ModelStore::new(models_dir)`; `install_bundled()` failure is **warn-only**.
+5. `ModelStore::new(models_dir)` — `s.stt.models_dir` when set (a user-chosen, possibly shared folder), else `paths.models_dir` (`<data>\models`, which `AppPaths` keeps as the default); `install_bundled()` failure is **warn-only**.
 6. `set_extra_dirs(s.stt.extra_model_dirs)`.
 7. `McpManager::new(db, change_callback)` — the callback (emitting
    `mcp://changed`) is installed **at construction**, so no manager exists without it.
@@ -2228,6 +2228,26 @@ pack.
   `AppError::Invalid("built-in models cannot be deleted")`. If the deleted model is
   the **loaded STT model**, it is unloaded **first** (its files are in use), then
   deleted, then STT is reloaded so speech keeps working without a wait.
+  `ModelStore::delete` only accepts **catalogue ids**, so another app's model
+  in a shared download folder is never removed.
+- `models_set_dir(dir)` moves the download folder (e.g. to a folder several
+  apps share, so ONNX models are not downloaded twice). It refuses relative
+  paths, a running model download and an active voice session; unloads STT and
+  every TTS voice (their files are open); then `ModelStore::relocate` probes
+  the target for write access, aborts if a same-named folder without a
+  `.complete` marker is there (another app's files), moves each installed
+  catalogue model (rename, or copy into `.moving-<id>` then rename + delete
+  across drives), reuses a model already complete in the target and removes
+  the old duplicate, and on a mid-way failure moves models back and keeps the
+  old folder. Success persists `stt.models_dir`, re-installs the bundled VAD,
+  reloads STT if it was loaded and emits `models://changed` +
+  `settings://changed`. Hand-placed models are left in the old folder.
+  `save_settings` and `settings::backup::merge_import` keep the current
+  `stt.models_dir`, so only this command changes it. `app_info` and
+  `open_folder("models")` report the current folder.
+- `download::install` refuses (and reports `error` progress) when `<dir>/<id>`
+  exists, is non-empty and has no `.complete` marker, so a shared folder's
+  foreign model is never replaced.
 - `gpu_set_enabled` writes the flag but takes effect **only after a restart**,
   because the libraries are chosen at process start by
   `services::gpu::activate_early()`.
@@ -3072,7 +3092,7 @@ pub const PROTECTED_MODELS: &[&str] = &[BUILT_IN_STT, BUILT_IN_VOICE, BUILT_IN_V
 const SKIP_DIRS: &[&str] = &["espeak-ng-data","test_wavs","blobs","refs",".git","dict","node_modules"];
 pub struct InstalledModel { id, name, kind, engine, languages, path, source, family, streaming, gender, size_bytes }
 pub struct Recommendation { stt: &'static str, vad: &'static str, tts: &'static str }
-pub struct ModelStore { pub dir: PathBuf, extra_dirs: RwLock<Vec<PathBuf>> }
+pub struct ModelStore { dir: RwLock<PathBuf>, extra_dirs: RwLock<Vec<PathBuf>> }  // dir() -> PathBuf
 pub struct IncompatibleModel { name, path, reason }
 ```
 
@@ -3114,9 +3134,24 @@ pub struct IncompatibleModel { name, path, reason }
   idempotent — it returns early when the marker **and** the file both exist, so a
   hand-deleted folder self-heals. **It is never downloaded.**
 - **`delete(id)` security:** ids containing `/`, `\` or `..` are rejected, and the
-  resolved path must `starts_with(&self.dir)` → `InvalidInput`. **Only models
-  inside the app's own folder can be deleted** — models in extra folders are
-  therefore never removed by the app, which a test asserts.
+  resolved path must `starts_with(self.dir())` and the id must be a **catalogue
+  id** → otherwise `InvalidInput`. **Only catalogue models inside the download
+  folder can be deleted** — models in extra folders, and other apps' models in a
+  shared download folder, are therefore never removed by the app, which tests
+  assert.
+- **Layout:** catalogue models live in kind folders — `<models>/stt/<id>`,
+  `<models>/tts/<id>`, `<models>/vad/<id>` (`model_path`, `ModelKind::folder`).
+  `ModelStore::new` runs `migrate_flat_layout`, moving flat `<models>/<id>`
+  installs from older versions into their kind folder (a flat duplicate of an
+  already-grouped model is removed). The scan skips catalogue-named folders
+  at the top level and directly inside a kind folder; hand-placed models may
+  sit anywhere, including inside `stt/`, `tts/` or `vad/`. Downloads stage in
+  `<models>/.staging-<id>` and are renamed into the kind folder.
+- **`relocate(new_dir)`** (behind `models_set_dir`): see the commands section;
+  covered by `relocate_moves_app_models_and_reuses_shared_copies`,
+  `relocate_refuses_a_foreign_folder_with_the_same_name` and
+  `copy_fallback_moves_nested_files`; the layout migration by
+  `flat_models_from_older_versions_move_into_kind_folders`.
 
 ---
 
@@ -6471,7 +6506,7 @@ the codebase.
 `hardware` `"auto"` (enum → `auto`), `auto_submit` `false`, `hands_free` `false`,
 `push_to_talk` `true`, `vad_threshold` `0.6` (**clamp 0.1 … 0.95**),
 `silence_ms` `800` (**clamp 200 … 5000**), `extra_model_dirs` `[]` (trim, drop
-blanks, dedup), `call_view` `true`, `auto_stop_silence_secs` `8` (0 = never;
+blanks, dedup), `models_dir` `""` (trimmed; `""` = `<data>\models`), `call_view` `true`, `auto_stop_silence_secs` `8` (0 = never;
 otherwise **clamp 2 … 120**), `hands_free_timeout_secs` `300` (0 = never;
 otherwise **clamp 15 … 3600**).
 

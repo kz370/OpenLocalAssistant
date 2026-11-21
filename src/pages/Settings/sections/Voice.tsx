@@ -91,7 +91,33 @@ function ModelFolders({ installed }: { installed: InstalledModel[] }) {
   const [s, set] = useS();
   const [info, setInfo] = useState<AppInfo | null>(null);
   const [unusable, setUnusable] = useState<IncompatibleModel[]>([]);
-  useEffect(() => void ipc.appInfo().then(setInfo), []);
+  const [moving, setMoving] = useState(false);
+  const [moveError, setMoveError] = useState<AppErrorPayload | null>(null);
+  useEffect(() => {
+    const load = () => void ipc.appInfo().then(setInfo);
+    load();
+    const sub = on("models://changed", load);
+    return () => void sub.then((u) => u());
+  }, []);
+
+  const changeDir = async (dir: string | null) => {
+    setMoveError(null);
+    setMoving(true);
+    try {
+      await ipc.modelsSetDir(dir);
+    } catch (e) {
+      setMoveError(toAppError(e));
+    } finally {
+      setMoving(false);
+      void ipc.appInfo().then(setInfo);
+    }
+  };
+
+  const pickDir = async () => {
+    const picked = await openDialog({ directory: true, multiple: false, title: t("settings.speech.changeFolderTitle") });
+    if (!picked || Array.isArray(picked)) return;
+    await changeDir(picked);
+  };
   useEffect(() => {
     void ipc.modelsIncompatible().then((x) => setUnusable(x ?? []));
   }, [s.stt.extraModelDirs.join("|")]);
@@ -124,10 +150,23 @@ function ModelFolders({ installed }: { installed: InstalledModel[] }) {
         <div className="folder-item">
           <span className="badge">{t("settings.speech.appFolder")}</span>
           <span className="folder-path" title={info?.paths.modelsDir}>
-            {info?.paths.modelsDir ?? "…"}
+            {moving ? t("settings.speech.movingModels") : (info?.paths.modelsDir ?? "…")}
           </span>
-          <span />
+          <span style={{ display: "flex", gap: 6 }}>
+            {s.stt.modelsDir && (
+              <button className="btn btn-sm" disabled={moving} onClick={() => void changeDir(null)}>
+                {t("settings.speech.resetFolder")}
+              </button>
+            )}
+            <button className="btn btn-sm" disabled={moving} title={t("settings.speech.changeFolderTitle")} onClick={() => void pickDir()}>
+              {t("settings.speech.changeFolder")}
+            </button>
+          </span>
         </div>
+        <p className="row-hint" style={{ margin: "0 0 6px" }}>
+          {t("settings.speech.changeFolderHint")}
+        </p>
+        {moveError && <ErrorNotice error={moveError} />}
         {s.stt.extraModelDirs.length === 0 && <p className="row-hint">{t("settings.speech.noCustom")}</p>}
         {s.stt.extraModelDirs.map((dir) => (
           <div className="folder-item" key={dir}>

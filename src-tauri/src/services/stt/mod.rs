@@ -366,7 +366,7 @@ mod tests {
         let app = tempfile::tempdir().unwrap();
         let store = Arc::new(ModelStore::new(app.path().to_path_buf()));
         // A catalog model (quality 3) plus a user-provided streaming model.
-        let base = app.path().join("whisper-small");
+        let base = store.model_dir("whisper-small");
         std::fs::create_dir_all(&base).unwrap();
         for f in [
             "encoder.int8.onnx",

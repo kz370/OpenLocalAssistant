@@ -148,6 +148,8 @@ export const ipc = {
   modelsDownload: (ids: string[]) => invoke<void>("models_download", { ids }),
   modelsCancel: (id: string) => invoke<void>("models_cancel", { id }),
   modelsDelete: (id: string) => invoke<void>("models_delete", { id }),
+  /** Moves downloaded models to `dir` (null = default folder); returns the folder now in use. */
+  modelsSetDir: (dir: string | null) => invoke<string>("models_set_dir", { dir }),
 
   // GPU pack (CUDA libraries for the local speech models)
   gpuStatus: () => invoke<GpuStatus>("gpu_status"),

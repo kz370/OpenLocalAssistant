@@ -78,9 +78,59 @@ pub fn recommend(_hw: &HardwareInfo) -> Recommendation {
 }
 
 pub struct ModelStore {
-    pub dir: PathBuf,
+    /// Where catalog models are downloaded to. The user can point it at a
+    /// folder shared with other apps (see [`ModelStore::relocate`]).
+    dir: std::sync::RwLock<PathBuf>,
     /// Extra folders the user added (models there are used read-only).
     extra_dirs: std::sync::RwLock<Vec<PathBuf>>,
+}
+
+/// True when the folder holds at least one entry.
+fn non_empty(dir: &Path) -> bool {
+    std::fs::read_dir(dir)
+        .map(|mut it| it.next().is_some())
+        .unwrap_or(false)
+}
+
+fn same_path(a: &Path, b: &Path) -> bool {
+    match (a.canonicalize(), b.canonicalize()) {
+        (Ok(a), Ok(b)) => a == b,
+        _ => a == b,
+    }
+}
+
+fn copy_dir(src: &Path, dst: &Path) -> std::io::Result<()> {
+    std::fs::create_dir_all(dst)?;
+    for e in std::fs::read_dir(src)? {
+        let e = e?;
+        let to = dst.join(e.file_name());
+        if e.file_type()?.is_dir() {
+            copy_dir(&e.path(), &to)?;
+        } else {
+            std::fs::copy(e.path(), &to)?;
+        }
+    }
+    Ok(())
+}
+
+/// Moves a folder, falling back to copy + delete across drives. The copy goes
+/// to a hidden staging name first, so a half-copied model is never seen as
+/// installed.
+fn move_dir(src: &Path, dst: &Path) -> std::io::Result<()> {
+    if std::fs::rename(src, dst).is_ok() {
+        return Ok(());
+    }
+    let name = dst
+        .file_name()
+        .map(|n| n.to_string_lossy().to_string())
+        .unwrap_or_default();
+    let staging = dst.with_file_name(format!(".moving-{name}"));
+    let _ = std::fs::remove_dir_all(&staging);
+    if let Err(e) = copy_dir(src, &staging).and_then(|_| std::fs::rename(&staging, dst)) {
+        let _ = std::fs::remove_dir_all(&staging);
+        return Err(e);
+    }
+    std::fs::remove_dir_all(src)
 }
 
 fn dir_size(dir: &Path) -> u64 {
@@ -97,13 +147,149 @@ fn dir_size(dir: &Path) -> u64 {
         .unwrap_or(0)
 }
 
+/// Where a model lives under `root`: catalog models are grouped by kind
+/// (`<root>/stt/<id>`, `<root>/tts/<id>`, `<root>/vad/<id>`); anything else
+/// sits directly in `root`.
+fn model_path(root: &Path, id: &str) -> PathBuf {
+    match catalog::find(id) {
+        Some(m) => root.join(m.kind.folder()).join(id),
+        None => root.join(id),
+    }
+}
+
+/// Moves catalog models installed by older versions straight into `root`
+/// (`<root>/<id>`) into their kind folder. A flat copy that is already
+/// installed in the kind folder too is removed.
+fn migrate_flat_layout(root: &Path) {
+    for m in CATALOG {
+        let flat = root.join(m.id);
+        if !flat.join(COMPLETE_MARKER).exists() {
+            continue;
+        }
+        let grouped = model_path(root, m.id);
+        let result = if grouped.join(COMPLETE_MARKER).exists() {
+            std::fs::remove_dir_all(&flat)
+        } else {
+            let _ = std::fs::remove_dir(&grouped); // an empty leftover folder
+            grouped
+                .parent()
+                .map_or(Ok(()), std::fs::create_dir_all)
+                .and_then(|_| move_dir(&flat, &grouped))
+        };
+        match result {
+            Ok(()) => tracing::info!(
+                model = m.id,
+                "model moved into its {} folder",
+                m.kind.folder()
+            ),
+            Err(e) => {
+                tracing::warn!(model = m.id, error = %e, "could not move the model into its kind folder")
+            }
+        }
+    }
+}
+
 impl ModelStore {
     pub fn new(dir: PathBuf) -> Self {
-        let _ = std::fs::create_dir_all(&dir);
+        if let Err(e) = std::fs::create_dir_all(&dir) {
+            tracing::warn!(dir = %dir.display(), error = %e, "models folder is not available");
+        }
+        migrate_flat_layout(&dir);
         Self {
-            dir,
+            dir: std::sync::RwLock::new(dir),
             extra_dirs: std::sync::RwLock::new(Vec::new()),
         }
+    }
+
+    /// The folder catalog models are downloaded to.
+    pub fn dir(&self) -> PathBuf {
+        self.dir.read().unwrap_or_else(|p| p.into_inner()).clone()
+    }
+
+    /// Moves every catalog model this app installed into `new_dir` and makes
+    /// it the download folder. A model that is already complete there (for
+    /// example downloaded by another install sharing the folder) is reused
+    /// and the old copy removed, so nothing is stored twice. Models placed by
+    /// hand are left where they are. On failure, models already moved are
+    /// moved back and the old folder stays in use. Returns how many models
+    /// were moved.
+    pub fn relocate(&self, new_dir: &Path) -> std::io::Result<usize> {
+        use std::io::{Error, ErrorKind};
+        let old = self.dir();
+        std::fs::create_dir_all(new_dir)?;
+        let probe = new_dir.join(".write-test");
+        std::fs::write(&probe, b"").map_err(|e| {
+            Error::new(
+                e.kind(),
+                format!("cannot write to {}: {e}", new_dir.display()),
+            )
+        })?;
+        let _ = std::fs::remove_file(&probe);
+        if same_path(&old, new_dir) {
+            return Ok(0);
+        }
+
+        let ids: Vec<&str> = CATALOG
+            .iter()
+            .filter(|m| self.is_installed(m.id))
+            .map(|m| m.id)
+            .collect();
+        let new_canon = new_dir.canonicalize()?;
+        for id in &ids {
+            if let Ok(model) = model_path(&old, id).canonicalize() {
+                if new_canon.starts_with(&model) {
+                    return Err(Error::new(
+                        ErrorKind::InvalidInput,
+                        format!("the new folder is inside the model folder {id}; pick a folder outside it"),
+                    ));
+                }
+            }
+            let dst = model_path(new_dir, id);
+            if dst.exists() && !dst.join(COMPLETE_MARKER).exists() && non_empty(&dst) {
+                return Err(Error::new(
+                    ErrorKind::AlreadyExists,
+                    format!(
+                        "{} already exists and was not installed by this app; rename or remove it, or pick another folder",
+                        dst.display()
+                    ),
+                ));
+            }
+        }
+
+        let mut moved: Vec<&str> = Vec::new();
+        let mut duplicates: Vec<&str> = Vec::new();
+        for id in &ids {
+            let (src, dst) = (model_path(&old, id), model_path(new_dir, id));
+            if dst.join(COMPLETE_MARKER).exists() {
+                duplicates.push(id);
+                continue;
+            }
+            let _ = std::fs::remove_dir(&dst); // an empty leftover folder
+            let step = dst
+                .parent()
+                .map_or(Ok(()), std::fs::create_dir_all)
+                .and_then(|_| move_dir(&src, &dst));
+            if let Err(e) = step {
+                for back in moved.iter().rev() {
+                    if let Err(e) = move_dir(&model_path(new_dir, back), &model_path(&old, back)) {
+                        tracing::warn!(model = back, error = %e, "could not move a model back");
+                    }
+                }
+                return Err(Error::new(
+                    e.kind(),
+                    format!("could not move {id} to {}: {e}", new_dir.display()),
+                ));
+            }
+            moved.push(id);
+        }
+        for id in duplicates {
+            if let Err(e) = std::fs::remove_dir_all(model_path(&old, id)) {
+                tracing::warn!(model = id, error = %e, "could not remove the duplicate model copy");
+            }
+        }
+        *self.dir.write().unwrap_or_else(|p| p.into_inner()) = new_dir.to_path_buf();
+        tracing::info!(from = %old.display(), to = %new_dir.display(), moved = moved.len(), "models folder changed");
+        Ok(moved.len())
     }
 
     pub fn set_extra_dirs(&self, dirs: Vec<PathBuf>) {
@@ -117,8 +303,9 @@ impl ModelStore {
             .clone()
     }
 
+    /// `<models>/<kind>/<id>` for catalog models (see [`model_path`]).
     pub fn model_dir(&self, id: &str) -> PathBuf {
-        self.dir.join(id)
+        model_path(&self.dir(), id)
     }
 
     pub fn is_installed(&self, id: &str) -> bool {
@@ -133,7 +320,7 @@ impl ModelStore {
             .filter(|m| self.is_installed(m.id))
             .map(|m| from_catalog(m, self.model_dir(m.id)))
             .collect();
-        self.scan_dir(&self.dir, true, &mut out);
+        self.scan_dir(&self.dir(), true, &mut out);
         for extra in self.extra_dirs() {
             self.scan_dir(&extra, false, &mut out);
         }
@@ -171,7 +358,11 @@ impl ModelStore {
                 if !path.is_dir() || child.starts_with('.') || SKIP_DIRS.contains(&child.as_str()) {
                     continue;
                 }
-                if skip_catalog && depth == 0 && catalog::find(&child).is_some() {
+                // Catalog folders are reported from the catalog, not the scan:
+                // `<models>/<kind>/<id>` and the old flat `<models>/<id>`.
+                let catalog_slot = depth == 0
+                    || (depth == 1 && catalog::KIND_FOLDERS.contains(&folder_name(dir).as_str()));
+                if skip_catalog && catalog_slot && catalog::find(&child).is_some() {
                     continue;
                 }
                 walk(store, &path, depth + 1, skip_catalog, out);
@@ -212,9 +403,14 @@ impl ModelStore {
 
     pub fn delete(&self, id: &str) -> std::io::Result<()> {
         let dir = self.model_dir(id);
-        // Guard against path traversal through crafted ids; only models inside
-        // the app's own folder can be deleted.
-        if id.contains(['/', '\\']) || id.contains("..") || !dir.starts_with(&self.dir) {
+        // Guard against path traversal through crafted ids; only catalog
+        // models inside the download folder can be deleted, never another
+        // app's model in a shared folder.
+        if id.contains(['/', '\\'])
+            || id.contains("..")
+            || !dir.starts_with(self.dir())
+            || catalog::find(id).is_none()
+        {
             return Err(std::io::Error::new(
                 std::io::ErrorKind::InvalidInput,
                 "invalid model id",
@@ -546,11 +742,16 @@ mod tests {
         assert!(!whisper.streaming);
         assert!(whisper.size_bytes > 0);
 
+        std::fs::create_dir_all(store.model_dir("whisper-small")).unwrap();
         std::fs::write(
-            root.path().join("whisper-small").join(COMPLETE_MARKER),
+            store.model_dir("whisper-small").join(COMPLETE_MARKER),
             b"{}",
         )
         .unwrap();
+        assert_eq!(
+            store.model_dir("whisper-small"),
+            root.path().join("stt").join("whisper-small")
+        );
         assert!(store.is_installed("whisper-small"));
         assert!(store.delete("../evil").is_err());
         store.delete("whisper-small").unwrap();
@@ -617,6 +818,114 @@ mod tests {
         assert!(bad[0].reason.contains("ONNX"));
     }
 
+    fn fake_install(store: &ModelStore, id: &str) {
+        let dir = store.model_dir(id);
+        std::fs::create_dir_all(dir.join("sub")).unwrap();
+        std::fs::write(dir.join("model.onnx"), b"weights").unwrap();
+        std::fs::write(dir.join("sub").join("tokens.txt"), b"t").unwrap();
+        std::fs::write(dir.join(COMPLETE_MARKER), b"{}").unwrap();
+    }
+
+    #[test]
+    fn relocate_moves_app_models_and_reuses_shared_copies() {
+        let old = tempfile::tempdir().unwrap();
+        let shared = tempfile::tempdir().unwrap();
+        let store = ModelStore::new(old.path().to_path_buf());
+        fake_install(&store, "whisper-small");
+        fake_install(&store, BUILT_IN_VOICE);
+        // A hand-placed model stays where it is.
+        let manual = old.path().join("my-model");
+        std::fs::create_dir_all(&manual).unwrap();
+        std::fs::write(manual.join("x.onnx"), b"x").unwrap();
+        // Another install already put the voice into the shared folder.
+        let other = ModelStore::new(shared.path().to_path_buf());
+        fake_install(&other, BUILT_IN_VOICE);
+
+        assert_eq!(store.relocate(shared.path()).unwrap(), 1);
+        assert_eq!(store.dir(), shared.path());
+        assert!(store.is_installed("whisper-small"));
+        assert!(store.is_installed(BUILT_IN_VOICE));
+        assert!(shared
+            .path()
+            .join("stt")
+            .join("whisper-small")
+            .join("sub")
+            .join("tokens.txt")
+            .is_file());
+        assert!(!old.path().join("stt").join("whisper-small").exists());
+        assert!(
+            !old.path().join("tts").join(BUILT_IN_VOICE).exists(),
+            "duplicate copy removed"
+        );
+        assert!(manual.exists());
+        // Another app's model in the shared folder can't be deleted.
+        assert!(store.delete("my-model").is_err());
+    }
+
+    #[test]
+    fn relocate_refuses_a_foreign_folder_with_the_same_name() {
+        let old = tempfile::tempdir().unwrap();
+        let shared = tempfile::tempdir().unwrap();
+        let store = ModelStore::new(old.path().to_path_buf());
+        fake_install(&store, "whisper-small");
+        let foreign = shared.path().join("stt").join("whisper-small");
+        std::fs::create_dir_all(&foreign).unwrap();
+        std::fs::write(foreign.join("readme.txt"), b"not ours").unwrap();
+
+        assert!(store.relocate(shared.path()).is_err());
+        assert_eq!(store.dir(), old.path(), "old folder stays in use");
+        assert!(store.is_installed("whisper-small"));
+        assert!(foreign.join("readme.txt").is_file());
+    }
+
+    #[test]
+    fn flat_models_from_older_versions_move_into_kind_folders() {
+        let root = tempfile::tempdir().unwrap();
+        for id in ["whisper-small", BUILT_IN_VOICE, BUILT_IN_VAD] {
+            let flat = root.path().join(id);
+            std::fs::create_dir_all(&flat).unwrap();
+            std::fs::write(flat.join("model.onnx"), b"x").unwrap();
+            std::fs::write(flat.join(COMPLETE_MARKER), b"{}").unwrap();
+        }
+        // A hand-placed model at the top level is not touched.
+        let manual = root.path().join("my-model");
+        std::fs::create_dir_all(&manual).unwrap();
+        std::fs::write(manual.join("x.onnx"), b"x").unwrap();
+
+        let store = ModelStore::new(root.path().to_path_buf());
+        for (kind, id) in [
+            ("stt", "whisper-small"),
+            ("tts", BUILT_IN_VOICE),
+            ("vad", BUILT_IN_VAD),
+        ] {
+            assert!(
+                root.path().join(kind).join(id).join("model.onnx").is_file(),
+                "{id}"
+            );
+            assert!(!root.path().join(id).exists(), "{id}");
+            assert!(store.is_installed(id));
+        }
+        assert!(manual.exists());
+        let installed = store.installed();
+        assert_eq!(
+            installed.len(),
+            3,
+            "catalog folders are not listed twice: {installed:?}"
+        );
+        assert!(installed.iter().all(|m| m.source == "catalog"));
+    }
+
+    #[test]
+    fn copy_fallback_moves_nested_files() {
+        let root = tempfile::tempdir().unwrap();
+        let src = root.path().join("a");
+        std::fs::create_dir_all(src.join("n")).unwrap();
+        std::fs::write(src.join("n").join("f"), b"1").unwrap();
+        let dst = root.path().join("b");
+        copy_dir(&src, &dst).unwrap();
+        assert_eq!(std::fs::read(dst.join("n").join("f")).unwrap(), b"1");
+    }
+
     #[test]
     fn finds_models_in_extra_folders_including_streaming_ones() {
         let app_dir = tempfile::tempdir().unwrap();
@@ -647,7 +956,7 @@ mod tests {
         assert_eq!(installed[0].family.as_deref(), Some("Streaming transducer"));
         assert_eq!(installed[0].path, nested);
         // Extra folders are never deleted by the app.
-        assert!(store.delete("nemotron-3.5-asr-streaming-0.6b").is_ok());
+        assert!(store.delete("nemotron-3.5-asr-streaming-0.6b").is_err());
         assert!(nested.exists());
     }
 }

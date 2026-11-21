@@ -461,6 +461,14 @@ commands::voice::models_cancel | calls | state::AppState.downloads
 commands::voice::models_delete | calls | services::models::ModelStore::delete
 commands::voice::models_delete | calls | services::stt::SttService::unload
 commands::voice::models_delete | calls | commands::memory::reload_stt
+commands::voice::models_set_dir | calls | services::models::ModelStore::relocate
+commands::voice::models_set_dir | calls | services::models::ModelStore::install_bundled
+commands::voice::models_set_dir | calls | services::stt::SttService::unload
+commands::voice::models_set_dir | calls | services::tts::TtsService::unload_model
+commands::voice::models_set_dir | calls | commands::memory::reload_stt
+commands::voice::models_set_dir | writes | settings::SttSettings::models_dir
+services::models::ModelStore::relocate | writes | <new models dir>/<id> (moved catalogue models)
+ui::Settings::Voice::ModelFolders | calls | ipc.modelsSetDir
 commands::voice::gpu_status | calls | services::gpu::status
 commands::voice::gpu_status | reads | services::hardware::HardwareInfo
 commands::voice::gpu_set_enabled | writes | services::gpu::set_enabled
@@ -555,6 +563,8 @@ src/pages/Settings/sections/Dictation.tsx | subscribes_to | dictation://history
 commands::app::save_settings (stt.extra_model_dirs) | emits | models://changed
 commands::voice::models_download | emits | models://changed
 commands::voice::models_delete | emits | models://changed
+commands::voice::models_set_dir | emits | models://changed
+commands::voice::models_set_dir | emits | settings://changed
 src/components/settings/ModelManager.tsx | subscribes_to | models://changed
 src/pages/Settings/sections/Voice.tsx | subscribes_to | models://changed
 
@@ -876,7 +886,7 @@ services::chat::orchestrator | writes | database::messages (user, assistant, too
 database::dictation::Db::dictation_add | writes | database::dictation_history (trimmed to 100 rows)
 database::export::Db::import_conversations | writes | database::conversations + database::messages (fresh ids)
 database::migrations::run | writes | database::conversations, messages, messages_fts, settings, mcp_servers, mcp_tool_permissions, dictation_history
-services::models::ModelStore::install_bundled | writes | <models_dir>/silero-vad/silero_vad.onnx + .complete
+services::models::ModelStore::install_bundled | writes | <models_dir>/vad/silero-vad/silero_vad.onnx + .complete
 services::models::download::install | writes | <models_dir>/<id>/.complete
 services::models::download::install | reads | Hugging Face | GitHub
 services::gpu::install | writes | <data_dir>/gpu/cuda-1.13.8 (7 required DLLs)
@@ -903,3 +913,5 @@ desktop::window (MENU_ROOM, CARD_MARGIN, CARD_RADIUS) | depends_on | src/styles/
 desktop::icon::accent_rgb | depends_on | settings::mod::sanitize (the allowed accent set) and src/app/settingsStore.ts::ACCENTS
 desktop::window (window labels) | depends_on | src-tauri/capabilities/default.json (`windows` array)
 lib::run (env var LA_OPEN) | depends_on | src/main.tsx (routeFromHash) for debug navigation
+services::models::ModelStore::new | calls | services::models::migrate_flat_layout
+services::models::ModelStore::model_dir | calls | services::models::catalog::ModelKind::folder

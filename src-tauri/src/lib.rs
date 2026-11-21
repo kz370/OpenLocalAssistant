@@ -55,7 +55,14 @@ fn init_state(app: &AppHandle) -> Result<AppState, Box<dyn std::error::Error>> {
         lmstudio.clone(),
         hardware.clone(),
     ));
-    let models = Arc::new(ModelStore::new(paths.models_dir.clone()));
+    // `paths.models_dir` stays the default; the user may have moved the
+    // models to a folder shared with other apps.
+    let models_dir = if s.stt.models_dir.is_empty() {
+        paths.models_dir.clone()
+    } else {
+        std::path::PathBuf::from(&s.stt.models_dir)
+    };
+    let models = Arc::new(ModelStore::new(models_dir));
     if let Err(e) = models.install_bundled() {
         tracing::warn!(error = %e, "could not install the bundled VAD model");
     }
@@ -681,6 +688,7 @@ pub fn run() {
             commands::voice::models_download,
             commands::voice::models_cancel,
             commands::voice::models_delete,
+            commands::voice::models_set_dir,
         ])
         .build(tauri::generate_context!())
         .expect("error while building Open Local Assistant")

@@ -253,7 +253,7 @@ sequenceDiagram
     end
 
     alt verified
-        DL->>FS: remove any previous models/id, then atomic rename .staging-id to models/id
+        DL->>FS: remove any previous models/id, then atomic rename .staging-id to models/kind/id (kind = stt|tts|vad)
         DL->>FS: write models/id/.complete (id + installedAt)
         DL-->>MM: DownloadProgress(done)
         DL->>MEM: if a speech model was loaded, reload it in the background

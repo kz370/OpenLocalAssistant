@@ -267,7 +267,9 @@ settings::LanguageSettings       — response_language, entries: Vec<LanguageEnt
   arabic_tashkeel_enabled, arabic_tashkeel_instruction
 settings::SttSettings            — model, language, microphone: Option<String>, hardware,
   auto_submit, hands_free, push_to_talk, vad_threshold, silence_ms, extra_model_dirs,
-  call_view, auto_stop_silence_secs, hands_free_timeout_secs   [14 fields]
+  models_dir, call_view, auto_stop_silence_secs, hands_free_timeout_secs   [15 fields]
+  (models_dir: download folder, "" = <root>\models; trimmed; preserved by
+   save_settings and settings import, changed only by models_set_dir)
 settings::TtsSettings            — speak_responses, legacy_voice_en, legacy_voice_ar,
   legacy_voice_de, speed, volume, output_device: Option<String>, preferred_gender,
   voice_hardware: BTreeMap<String,String>, speak_after_reply, expressive_sounds,
@@ -496,6 +498,7 @@ stt 14, tts 9, dictation 12, search 7.
     model: string; language: string; microphone: string|null;
     hardware: "auto"|"cpu"; autoSubmit: boolean; handsFree: boolean; pushToTalk: boolean;
     vadThreshold: number; silenceMs: number; extraModelDirs: string[];
+    modelsDir: string;
     callView: boolean; autoStopSilenceSecs: number; handsFreeTimeoutSecs: number;
   }
   tts: {
@@ -843,13 +846,23 @@ Root:  %APPDATA%\com.localassistant.app
   <root>\settings.json           DOES NOT EXIST — the settings live in the
                                  `settings` table of assistant.db, one row,
                                  key `app_settings`
-  <root>\models\                 Local voice and speech models
-      <root>\models\<id>\         one folder per model, recognised by
+  <root>\models\                 Local voice and speech models (default; the
+                                 user may move the download folder anywhere,
+                                 e.g. a folder shared with other apps, via
+                                 stt.modelsDir / models_set_dir — same layout)
+      <root>\models\<kind>\<id>\  one folder per catalog model, grouped by
+                                 kind: stt\ (speech recognition), tts\
+                                 (voices), vad\ (voice activity); older
+                                 flat <root>\models\<id>\ installs are moved
+                                 into their kind folder at startup
+                                 (migrate_flat_layout). Recognised by
                                  <id>\.complete   (a JSON marker:
                                  {"id","installedAt","bundled"?})
       <root>\models\.staging-<id> transient download/extraction staging
                                  directory, removed on success, failure or cancel
-      <root>\models\silero-vad\  bundled VAD written from the executable
+      <models>\.moving-<id>      transient copy target while models_set_dir
+                                 moves a model across drives
+      <root>\models\vad\silero-vad\  bundled VAD written from the executable
                                  (silero_vad.onnx + .complete with
                                  "bundled": true); never downloaded
   <root>\logs\                   Rolling text logs
