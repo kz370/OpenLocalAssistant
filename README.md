@@ -200,7 +200,7 @@ npm run tauri dev
 ### Build the installer and the portable version
 
 ```bat
-build-installer.bat
+scripts\build-installer.bat
 ```
 
 This builds the frontend and the release exe, then writes these to `release\`:
@@ -208,9 +208,9 @@ This builds the frontend and the release exe, then writes these to `release\`:
 - `Open Local Assistant.exe` plus the four speech `.dll` files (the portable version)
 - `Open-Local-Assistant-<version>-setup.exe` (needs Inno Setup)
 
-When the build finishes, it asks whether to upload it as GitHub release `v<version>` (creating it, or replacing the files of an existing one). `build-installer.bat upload` uploads without asking, and `build-installer.bat noupload` never asks.
+When the build finishes, it asks whether to upload it as GitHub release `v<version>` (creating it, or replacing the files of an existing one). `scripts\build-installer.bat upload` uploads without asking, and `scripts\build-installer.bat noupload` never asks.
 
-`build-installer.bat install` skips the installer and copies the app straight into `C:\Program Files\Open Local Assistant` (asks for administrator rights).
+`scripts\build-installer.bat install` skips the installer and copies the app straight into `C:\Program Files\Open Local Assistant` (asks for administrator rights).
 
 ### Publish a release (maintainers)
 

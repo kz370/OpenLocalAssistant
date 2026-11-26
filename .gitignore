@@ -37,4 +37,4 @@ commit-message.txt
 
 .vscode
 .kilo
-upload-release-onother-project.bat
+scripts/upload-release-onother-project.bat

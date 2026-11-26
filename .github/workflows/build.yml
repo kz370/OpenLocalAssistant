@@ -127,7 +127,7 @@ jobs:
         env:
           BUILD_JOBS: 4
           CACHE_LIMIT_GB: 20
-        run: call build-installer.bat noupload < NUL
+        run: call scripts\build-installer.bat noupload < NUL
 
       - name: Package and verify release files
         shell: pwsh

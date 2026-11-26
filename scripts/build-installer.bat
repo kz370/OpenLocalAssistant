@@ -7,20 +7,21 @@ rem
 rem  Build outputs land in release\v<version>\ - one folder per release, so
 rem  rebuilding an old version never overwrites the current release's files.
 rem
-rem    build-installer.bat           build exe + setup (Inno Setup)
-rem    build-installer.bat install   build exe, then install it directly into
+rem    scripts\build-installer.bat           build exe + setup (Inno Setup)
+rem    scripts\build-installer.bat install   build exe, then install it directly into
 rem                                  "C:\Program Files\Open Local Assistant"
 rem                                  (asks for admin)
-rem    build-installer.bat upload    build exe + setup, then upload them as a
+rem    scripts\build-installer.bat upload    build exe + setup, then upload them as a
 rem                                  GitHub release without asking
-rem    build-installer.bat noupload  build exe + setup, never ask to upload
+rem    scripts\build-installer.bat noupload  build exe + setup, never ask to upload
 rem
 rem  Needs: Rust (https://rustup.rs) with the MSVC toolchain.
 rem         Inno Setup 6 or 7 (https://jrsoftware.org/isdl.php) for the setup file.
 rem ---------------------------------------------------------------------------
 
 
-set "ROOT=%~dp0"
+rem This script lives in scripts\; ROOT is the repository root (with a trailing backslash).
+for %%I in ("%~dp0..") do set "ROOT=%%~fI\"
 set "APPNAME=Open Local Assistant"
 set "BINNAME=local-ai-assistant"
 set "EXE=%ROOT%src-tauri\target\release\%BINNAME%.exe"

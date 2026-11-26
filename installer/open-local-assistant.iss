@@ -1,7 +1,7 @@
 ; ---------------------------------------------------------------------------
 ; Open Local Assistant - Inno Setup 6 script (all users, C:\Program Files)
 ;
-; Built by build-installer.bat, which passes:
+; Built by scripts\build-installer.bat, which passes:
 ;   /DAppVersion=...  /DSourceExe=...  /DOutputDir=...
 ; ---------------------------------------------------------------------------
 

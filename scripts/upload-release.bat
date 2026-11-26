@@ -2,7 +2,7 @@
 setlocal EnableExtensions
 cd /d "%~dp0.."
 
-rem Publish a GitHub release of this repo from the files build-installer.bat
+rem Publish a GitHub release of this repo from the files scripts\build-installer.bat
 rem put in release\v<version>\:
 rem   release\v<version>\Open-Local-Assistant-<version>-setup.exe   uploaded as-is
 rem   release\v<version>\Open Local Assistant.exe + speech DLLs    zipped as the
@@ -39,7 +39,7 @@ set "DIST="
 for /f "delims=" %%F in ('powershell -NoProfile -Command "$f = Get-ChildItem -Path '%RELEASEDIR%' -Recurse -File -Filter 'Open-Local-Assistant-*-setup.exe' -ErrorAction SilentlyContinue | Sort-Object LastWriteTime -Descending | Select-Object -First 1; if ($f) { $f.FullName }"') do if not defined SETUP set "SETUP=%%F"
 if not defined SETUP (
   echo No Open-Local-Assistant-*-setup.exe found under %RELEASEDIR%\ and no tag given.
-  echo Run build-installer.bat first or provide an explicit tag.
+  echo Run scripts\build-installer.bat first or provide an explicit tag.
   exit /b 1
 )
 for %%P in ("%SETUP%") do (
@@ -70,7 +70,7 @@ set "SETUP="
 for /f "delims=" %%F in ('dir /b /a-d /o-d "%DIST%\Open-Local-Assistant-*-setup.exe" 2^>nul') do if not defined SETUP set "SETUP=%%F"
 if not defined SETUP (
   echo No Open-Local-Assistant-*-setup.exe found in %DIST%.
-  echo Run build-installer.bat first.
+  echo Run scripts\build-installer.bat first.
   exit /b 1
 )
 
@@ -85,9 +85,9 @@ set "PORTABLE_FILES="Open Local Assistant.exe" sherpa-onnx-c-api.dll sherpa-onnx
 where gh >nul 2>&1 || (echo GitHub CLI "gh" not found. & exit /b 1)
 where git >nul 2>&1 || (echo git not found. & exit /b 1)
 if /i "%MODE%"=="notes-only" goto :commit_step
-if not exist "%SETUPPATH%" (echo Missing %SETUPPATH% - run build-installer.bat first. & exit /b 1)
+if not exist "%SETUPPATH%" (echo Missing %SETUPPATH% - run scripts\build-installer.bat first. & exit /b 1)
 for %%f in (%PORTABLE_FILES%) do (
-  if not exist "%DIST%\%%~f" (echo Missing %DIST%\%%~f - run build-installer.bat first. & exit /b 1)
+  if not exist "%DIST%\%%~f" (echo Missing %DIST%\%%~f - run scripts\build-installer.bat first. & exit /b 1)
 )
 
 :commit_step
