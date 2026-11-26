@@ -1,0 +1,71 @@
+name: Website
+
+# Publishes the project site (the website/ folder) to GitHub Pages.
+#
+# The ONLY trigger is pushing a tag whose name contains "website" or "page", for example:
+#
+#   git tag website-2026-11-26
+#   git push origin website-2026-11-26
+#
+# Pushing to a branch, opening a pull request, publishing a release or pushing a version tag
+# such as v1.2.3 never deploys the site, and there is no manual "Run workflow" button.
+#
+# One-time repository setup (Settings):
+#   - Pages -> Build and deployment -> Source: GitHub Actions
+#   - Environments -> github-pages -> Deployment branches and tags: add the tag patterns
+#     "*website*" and "*page*", otherwise GitHub refuses a deploy that starts from a tag.
+on:
+  push:
+    tags:
+      - "*website*"
+      - "*page*"
+
+# Pages deploy needs these, and nothing else.
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# One deploy at a time; a second run waits instead of cancelling a deploy halfway.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: Deploy website
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check the site before deploying
+        run: |
+          set -euo pipefail
+          test -f website/index.html || { echo "::error::website/index.html is missing."; exit 1; }
+          # Every local file the page references must exist, so a broken image never goes live.
+          missing=0
+          for f in $(grep -oE '(href|src|content|srcset)="(assets/[^"]+)"' website/index.html \
+                      | sed -E 's/^[a-z]+="//; s/"$//' | sort -u); do
+            [ -f "website/$f" ] || { echo "::error::website/index.html references $f, which is not in the repository."; missing=1; }
+          done
+          exit $missing
+
+      - name: Stage the site
+        run: |
+          set -euo pipefail
+          mkdir -p _site
+          cp -r website/. _site/
+          rm -f _site/README.md
+          # Plain static files: no Jekyll processing.
+          touch _site/.nojekyll
+          find _site -type f | sort
+
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+      - id: deployment
+        uses: actions/deploy-pages@v4

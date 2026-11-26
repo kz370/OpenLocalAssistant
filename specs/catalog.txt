@@ -822,13 +822,20 @@ src-tauri/capabilities/default.json :: permissions — `core:default`, three `co
 .github/workflows/build.yml :: triggers — manual `workflow_dispatch` with optional `release_tag`; blank builds an Actions artifact, while a matching `v<major>.<minor>.<patch>` value checks out that tag, builds it, and publishes its GitHub Release.
 .github/workflows/build.yml :: permissions — `contents: read` by default; only the publish job receives `contents: write`.
 .github/workflows/build.yml :: test — Windows `npm ci`, `npm run build` (creates Tauri's required `src-tauri/../dist`), Rust formatting, Clippy, Rust tests, and frontend tests.
-.github/workflows/build.yml :: build — when `release_tag` is set, validate it against `src-tauri/Cargo.toml` and check out its source; run `build-installer.bat noupload`; require versioned setup exe and five portable files; create portable ZIP and SHA-256SUMS; upload an Actions artifact.
+.github/workflows/build.yml :: build — when `release_tag` is set, validate it against `src-tauri/Cargo.toml` and check out its source; run `scripts\build-installer.bat noupload`; require versioned setup exe and five portable files; create portable ZIP and SHA-256SUMS; upload an Actions artifact.
 .github/workflows/build.yml :: publish — only when a matching release tag is selected/provided; separate job downloads the build artifact, creates or updates the matching GitHub Release, and uses `release-notes/<tag>.md` or generated notes.
 
-build-installer.bat :: modes — no argument (build + offer to publish), `install`, `upload`, `noupload` (what CI uses).
-build-installer.bat :: DIST — `release\v<version>` (one folder per release; never `dist\`, which is the embedded frontend folder).
-build-installer.bat :: phases — preflight cache trim (8 GB cap) -> `npm run build` -> `cargo build --release` + sherpa-onnx cache copy-back -> locate Inno Setup 7 or 6 -> `ISCC` with `/D` defines.
-build-installer.bat :: portable output — `Open Local Assistant.exe` plus 4 speech DLLs (`sherpa-onnx-c-api`, `sherpa-onnx-cxx-api`, `onnxruntime`, `onnxruntime_providers_shared`).
+.github/workflows/pages.yml :: triggers — `push` of tags matching `*website*` or `*page*` only; no branch, pull_request, release or manual trigger.
+.github/workflows/pages.yml :: deploy — checkout, verify `website/index.html` and every `assets/` file it references, stage `website/` to `_site/` (no README, plus `.nojekyll`), `configure-pages`, `upload-pages-artifact`, `deploy-pages` (environment `github-pages`, permissions `contents: read`, `pages: write`, `id-token: write`).
+website/index.html :: sections — hero, features, voice, right-click explain, getting started, settings gallery, privacy, download (SmartScreen, SHA-256 verify, PC requirements), `data-more-projects` mount with `data-current="OpenLocalAssistant"`.
+website/assets/js/site.js :: latest-release links — fetches `api.github.com/repos/kz370/OpenLocalAssistant/releases/latest`, sets `data-dl` hrefs (`-setup.exe`, `-portable-win-x64.zip`, `-SHA256SUMS.txt`) and `data-version` text; silent fallback to the Releases page.
+website/assets/more-projects/more-projects.js :: PROJECTS — Open Local Server, Open Local Dictation, Open Local Assistant (icons beside the script); entry matching `data-current` is hidden.
+website/assets/css/site.css :: tokens — copied from `src/styles/tokens.css` (graphite surfaces, teal accent); dark default, light via `prefers-color-scheme`.
+
+scripts\build-installer.bat :: modes — no argument (build + offer to publish), `install`, `upload`, `noupload` (what CI uses).
+scripts\build-installer.bat :: DIST — `release\v<version>` (one folder per release; never `dist\`, which is the embedded frontend folder).
+scripts\build-installer.bat :: phases — preflight cache trim (8 GB cap) -> `npm run build` -> `cargo build --release` + sherpa-onnx cache copy-back -> locate Inno Setup 7 or 6 -> `ISCC` with `/D` defines.
+scripts\build-installer.bat :: portable output — `Open Local Assistant.exe` plus 4 speech DLLs (`sherpa-onnx-c-api`, `sherpa-onnx-cxx-api`, `onnxruntime`, `onnxruntime_providers_shared`).
 scripts/upload-release.bat :: — Reads `release\v<version>\` (newest setup exe found recursively under `release\` wins when no tag is given); prompts for full, notes-only, or full-force-tag, commits/pushes, and for full modes zips the 5 portable files, writes SHA-256 sums and optionally signs the updater manifest before `gh release create` / `upload --clobber`.
 installer/open-local-assistant.iss :: — Inno Setup script receiving `AppVersion`, `SourceExe`, `LibDir`, `OutputDir` from the batch file.
 scripts/generate_icon.py :: — Generates the build-time icon (rounded teal square + white wave); deliberately different from the runtime icon in `desktop/icon.rs`.

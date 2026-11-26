@@ -3,9 +3,9 @@
 Documentation pipeline state for **Open Local Assistant** (`local-ai-assistant` v1.2.2).
 
 - **Repository root:** `I:\Development\repos\Open-Local-Ai-Assistant`
-- **Tracked files (git):** 234
-- **Analysable source / config / doc files:** 170
-- **Binary assets (excluded from line-level analysis):** 64
+- **Tracked files (git):** 257
+- **Analysable source / config / doc files:** 176
+- **Binary assets (excluded from line-level analysis):** 81
 - **Documentation language:** English (100%)
 - **Started:** 2026-09-27T21:50:21Z
 
@@ -31,12 +31,11 @@ coverage completeness but are **not** deep-analysed: they carry no code semantic
 
 ## Files to Process
 
-### 1. Repository Root (12)
+### 1. Repository Root (11)
 
 - `/LICENSE`
 - `/PRIVACY.md`
 - `/README.md`
-- `/build-installer.bat`
 - `/commit-message.txt` (git-ignored; not tracked)
 - `/index.html`
 - `/package.json`
@@ -46,11 +45,12 @@ coverage completeness but are **not** deep-analysed: they carry no code semantic
 - `/vite.config.ts`
 - `/.gitignore`
 
-### 2. CI, Editor, Scripts, Installer (6)
+### 2. CI, Editor, Scripts, Installer (7)
 
 - `/.github/workflows/build.yml`
 - `/.vscode/extensions.json`
 - `/scripts/generate_icon.py`
+- `/scripts/build-installer.bat`
 - `/scripts/upload-release.bat`
 - `/installer/open-local-assistant.iss`
 - `/src-tauri/.gitignore`
@@ -280,18 +280,29 @@ coverage completeness but are **not** deep-analysed: they carry no code semantic
 - `/release-notes/v1.2.1.md`
 - `/release-notes/v1.2.2.md`
 
+### 19. Project Website (6)
+
+- `/.github/workflows/pages.yml`
+- `/website/index.html`
+- `/website/README.md`
+- `/website/assets/css/site.css`
+- `/website/assets/js/site.js`
+- `/website/assets/more-projects/more-projects.js`
+
+(`/website/assets/img/*` and `/website/assets/more-projects/*.webp` are binary copies of `docs/` screenshots and project icons; counted under Binary Assets.)
+
 ---
 
 ## Files Processed
 
-### 1. Repository Root (12) — COMPLETE
-`LICENSE`, `PRIVACY.md`, `README.md`, `build-installer.bat`, `commit-message.txt`,
+### 1. Repository Root (11) — COMPLETE
+`LICENSE`, `PRIVACY.md`, `README.md`, `commit-message.txt`,
 `index.html`, `package.json`, `package-lock.json`, `tsconfig.json`,
 `tsconfig.node.json`, `vite.config.ts`, `.gitignore`
 
-### 2. CI, Editor, Scripts, Installer (6) — PARTIAL
+### 2. CI, Editor, Scripts, Installer (7) — PARTIAL
 `.github/workflows/build.yml`, `.vscode/extensions.json`, `scripts/generate_icon.py`,
-`scripts/upload-release.bat`,
+`scripts/build-installer.bat`, `scripts/upload-release.bat`,
 `installer/open-local-assistant.iss`, `src-tauri/.gitignore`
 
 ### 3. Rust Build & Manifest (5) — COMPLETE
@@ -339,6 +350,11 @@ coverage completeness but are **not** deep-analysed: they carry no code semantic
 ### 18. Release Notes (6) — COMPLETE
 `release-notes/v0.1.0.md`, `release-notes/v1.0.0.md`, `release-notes/v1.1.0.md`,
 `release-notes/v1.2.0.md`, `release-notes/v1.2.1.md`, `release-notes/v1.2.2.md`
+
+### 19. Project Website (6) — COMPLETE
+`.github/workflows/pages.yml`, `website/index.html`, `website/README.md`,
+`website/assets/css/site.css`, `website/assets/js/site.js`,
+`website/assets/more-projects/more-projects.js`
 
 ---
 
@@ -419,3 +435,5 @@ coverage completeness but are **not** deep-analysed: they carry no code semantic
 - [2026-11-21T17:40:00Z] Catalogue models are now grouped by kind inside the models folder: `<models>/stt/<id>`, `<models>/tts/<id>`, `<models>/vad/<id>` (`ModelKind::folder`, `KIND_FOLDERS`, private `model_path`). `ModelStore::new` runs `migrate_flat_layout`, moving older flat `<models>/<id>` installs into their kind folder; `relocate`, `download::install` (creates the kind folder before the final rename) and `install_bundled` use the new layout; the scan skips catalogue folders at both slots. New test `flat_models_from_older_versions_move_into_kind_folders`; `cargo test` = 183 lib passed. Specs: `data_models.txt`, `catalog.txt`, `relationships.txt`, `full_documentation.md`, `diagrams/sequence.mmd`, this log. No files added, so the Files Processed inventory is unchanged.
 - [2026-11-21T18:30:00Z] Bumped the application version to 1.2.2 in `package.json`, `package-lock.json` (root and `packages[""]`), `src-tauri/Cargo.toml`, `src-tauri/Cargo.lock` (rewritten by cargo) and `src-tauri/tauri.conf.json`; synchronized current-version spec headers and the current-version line in `full_documentation.md`. No `release-notes/v1.2.2.md` yet, so a CI release would use GitHub-generated notes. File counts unchanged.
 - [2026-11-21T18:45:00Z] Added `release-notes/v1.2.2.md` covering the selectable, shareable models download folder and the `stt` / `tts` / `vad` kind sub-folders with automatic migration. Section 18 (Release Notes) 5 -> 6 in both "Files to Process" and "Files Processed" (COMPLETE), tracked/analysable file counts +1, and the release-notes entry in `full_documentation.md` extended, so the counters for this section still agree.
+- [2026-11-26T20:30:00Z] Added the project website: `website/` (index.html, assets/css/site.css, assets/js/site.js, assets/more-projects/more-projects.js with three project icons, assets/img copies of `docs/screenshots/*` and the icon, README.md) and `.github/workflows/pages.yml`, which deploys it to GitHub Pages only on pushed tags whose name contains `website` or `page` (no branch, release or manual trigger). The page has a "Check my other projects" section (Open Local Server, Open Local Dictation) and resolves release download links from the GitHub API at view time. No Rust, UI, IPC, config or data-model change, so `data_models.txt` and `api_reference.md` are unchanged. Specs: `full_documentation.md`, `catalog.txt`, `relationships.txt`, `developer_guide.md` §11.5, this file. New section 19 (Project Website, 6) added to both "Files to Process" and "Files Processed" (COMPLETE); counts +6 analysable, +17 binary (14 screenshot/icon copies, 3 project icons).
+- [2026-11-26T21:10:00Z] Moved `build-installer.bat` from the repository root to `scripts/` (the root now holds no `.bat` files; the git-ignored `upload-release-onother-project.bat` moved too). `ROOT` in the script is now resolved as the parent of `scripts\`, so every path it uses is unchanged. Updated the `build.yml` call (`call scripts\build-installer.bat noupload`), the installer `.iss` comment, `scripts/upload-release.bat` messages, `.gitignore`, README, and every spec reference (`full_documentation.md`, `catalog.txt`, `developer_guide.md`, `architecture_overview.md`); older log entries keep the original path. Section 1 Repository Root 12 -> 11, section 2 CI/Scripts 6 -> 7 in both lists. Website: the Website and GitHub links in the "Check my other projects" cards are now icon buttons with `title`/`aria-label`.

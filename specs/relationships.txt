@@ -915,3 +915,8 @@ desktop::window (window labels) | depends_on | src-tauri/capabilities/default.js
 lib::run (env var LA_OPEN) | depends_on | src/main.tsx (routeFromHash) for debug navigation
 services::models::ModelStore::new | calls | services::models::migrate_flat_layout
 services::models::ModelStore::model_dir | calls | services::models::catalog::ModelKind::folder
+.github/workflows/pages.yml | deploys | website/ (index.html and assets/)
+website/index.html | depends_on | website/assets/css/site.css, website/assets/js/site.js, website/assets/more-projects/more-projects.js
+website/assets/img/* | copies | docs/screenshots/* and docs/icon.webp
+website/assets/js/site.js | calls | GitHub releases API (latest release of kz370/OpenLocalAssistant)
+website/assets/css/site.css | copies_tokens_from | src/styles/tokens.css

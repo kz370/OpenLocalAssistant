@@ -1,0 +1,308 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Open Local Assistant: a free, private AI assistant for Windows</title>
+  <meta name="description" content="Free, open-source desktop AI assistant for Windows. Type or talk to it, hear answers read aloud, dictate into any app. Runs on your PC through LM Studio, or on a hosted provider you choose. No sign-up, no telemetry.">
+  <meta name="theme-color" content="#0e1312">
+  <link rel="icon" type="image/webp" href="assets/img/icon.webp">
+
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="Open Local Assistant">
+  <meta property="og:description" content="A free, private desktop AI assistant for Windows. Chat, voice, hands-free calls and dictation into any app.">
+  <meta property="og:url" content="https://kz370.github.io/OpenLocalAssistant/">
+  <meta property="og:image" content="https://kz370.github.io/OpenLocalAssistant/assets/img/chat-web-search.webp">
+  <meta name="twitter:card" content="summary_large_image">
+
+  <link rel="stylesheet" href="assets/css/site.css">
+  <script src="assets/js/site.js" defer></script>
+  <script src="assets/more-projects/more-projects.js" defer></script>
+</head>
+<body>
+  <a class="skip" href="#main">Skip to content</a>
+
+  <header class="site-header">
+    <div class="wrap">
+      <a class="brand" href="#top">
+        <img src="assets/img/icon.webp" width="30" height="30" alt="">
+        Open Local Assistant
+      </a>
+      <nav class="nav" aria-label="Sections">
+        <a href="#features">Features</a>
+        <a href="#voice">Voice</a>
+        <a href="#explain">Right-click</a>
+        <a href="#settings">Settings</a>
+        <a href="#privacy">Privacy</a>
+        <a href="#download">Download</a>
+      </nav>
+      <a class="btn btn--primary btn--sm" href="https://github.com/kz370/OpenLocalAssistant/releases/latest" data-dl="setup">Download</a>
+    </div>
+  </header>
+
+  <main id="main">
+    <!-- Hero -->
+    <section class="hero" id="top">
+      <div class="wrap">
+        <div>
+          <span class="eyebrow">Free and open source for Windows</span>
+          <h1>An AI assistant that stays on your PC.</h1>
+          <p class="lead">Type or talk to it, and it can answer out loud. It runs fully on your own PC through <a href="https://lmstudio.ai">LM Studio</a>, or on a hosted AI provider if you choose one. No sign-up, no telemetry.</p>
+          <div class="cta">
+            <a class="btn btn--primary" href="https://github.com/kz370/OpenLocalAssistant/releases/latest" data-dl="setup">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12m0 0 4-4m-4 4-4-4M4 20h16"/></svg>
+              Download for Windows
+            </a>
+            <a class="btn" href="https://github.com/kz370/OpenLocalAssistant">View on GitHub</a>
+          </div>
+          <p class="note">Windows 10 or 11, 64-bit. Installer or portable zip. <a href="#download">SmartScreen note</a></p>
+          <ul class="facts" aria-label="Key facts">
+            <li data-version>Latest release</li>
+            <li>GPL-3.0</li>
+            <li>No account</li>
+            <li>No telemetry</li>
+          </ul>
+        </div>
+        <figure class="shot">
+          <img src="assets/img/chat-web-search.webp" width="561" height="669" alt="The chat window answering a question about the latest PHP version, with a list of web sources under the answer.">
+        </figure>
+      </div>
+    </section>
+
+    <!-- Features -->
+    <section id="features">
+      <div class="wrap">
+        <div class="section-head">
+          <span class="eyebrow">What it does</span>
+          <h2>Chat, voice and dictation in one small window.</h2>
+          <p>Press <kbd>Ctrl</kbd>+<kbd>Space</kbd> to open it. When you close it, it goes to the system tray.</p>
+        </div>
+        <div class="grid grid--3">
+          <article class="card">
+            <h3>Local or hosted AI, your choice</h3>
+            <p>Use LM Studio to keep everything on your PC. If your PC can't run models, connect OpenRouter, Google Gemini or Hugging Face with your own API key. A "free models only" filter hides models that cost money.</p>
+          </article>
+          <article class="card">
+            <h3>Voice in and out</h3>
+            <p>Speak your question and hear the answer read back with local neural voices.</p>
+          </article>
+          <article class="card">
+            <h3>Hands-free calls</h3>
+            <p>A phone-call style screen with live captions, so you can talk without using the keyboard.</p>
+          </article>
+          <article class="card">
+            <h3>Dictation in any app</h3>
+            <p>Press a hotkey, speak, and the text is typed into Notepad, your browser, or whatever app has focus.</p>
+          </article>
+          <article class="card">
+            <h3>One voice model, every language</h3>
+            <p>A single small multilingual voice model (Supertonic 3, 123 MB, 31 languages) speaks English, Arabic, German and more. Arabic text is shown right-to-left.</p>
+          </article>
+          <article class="card">
+            <h3>Web search with sources</h3>
+            <p>For "latest / today" questions the assistant searches the web and lists the pages it used. One button in the composer turns search on or off.</p>
+          </article>
+          <article class="card">
+            <h3>MCP tools</h3>
+            <p>Connect Model Context Protocol servers. Anything that writes data or runs commands asks you first, and you choose per chat which servers are on.</p>
+          </article>
+          <article class="card">
+            <h3>Right-click any reply</h3>
+            <p>Select text in an answer, then right-click to hear it read aloud, get a short explanation, or ask about it as the next message.</p>
+          </article>
+          <article class="card">
+            <h3>Optional NVIDIA GPU pack</h3>
+            <p>Speeds up speech recognition and the voices. If the GPU fails to start, the app falls back to the CPU.</p>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <!-- Voice -->
+    <section class="section--alt" id="voice">
+      <div class="wrap split">
+        <div>
+          <span class="eyebrow">Voice</span>
+          <h2>Talk to it, or dictate into any app.</h2>
+          <ul class="ticks">
+            <li><strong>Push-to-talk:</strong> hold <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>Space</kbd> while you speak.</li>
+            <li><strong>Hands-free:</strong> click the waveform button next to the message box. The call screen listens, answers, and highlights each word as it is spoken. Pause, mute or end the call at any time.</li>
+            <li><strong>Dictation:</strong> press <kbd>Ctrl</kbd>+<kbd>Alt</kbd>+<kbd>Space</kbd> in any app. A small overlay shows your words live, and pressing the hotkey again inserts the text.</li>
+            <li><strong>Target application:</strong> the overlay shows which app your text will be entered into.</li>
+          </ul>
+          <p class="note">Speech recognition and the assistant's voice always run on your PC, whichever AI provider you use.</p>
+        </div>
+        <div class="shots">
+          <figure class="shot">
+            <img src="assets/img/hands-free-call.webp" width="572" height="669" loading="lazy" alt="The hands-free call screen.">
+          </figure>
+        </div>
+      </div>
+      <div class="wrap" style="margin-top: clamp(32px, 5vw, 56px)">
+        <figure class="shot shot--overlay">
+          <img src="assets/img/dictation-overlay.webp" width="1794" height="689" loading="lazy" alt="The dictation overlay showing live words while listening.">
+          <figcaption>The dictation overlay while listening.</figcaption>
+        </figure>
+      </div>
+    </section>
+
+    <!-- Right-click -->
+    <section id="explain">
+      <div class="wrap split split--flip">
+        <div>
+          <span class="eyebrow">Right-click a reply</span>
+          <h2>Ask about just one part of an answer.</h2>
+          <p class="lead">Select any part of the assistant's answer and right-click it.</p>
+          <ul class="ticks">
+            <li><strong>Speak</strong> reads the selected text out loud.</li>
+            <li><strong>Explain</strong> opens a small pop-up with a short explanation of just that part, without leaving the answer.</li>
+            <li><strong>Ask in chat</strong> (in the pop-up) sends the selection as your next message, so the assistant explains it in more detail in the same conversation.</li>
+          </ul>
+        </div>
+        <figure class="shot">
+          <img src="assets/img/explain-demo.gif" width="572" height="669" loading="lazy" alt="Selecting a word in a reply, right-clicking it and choosing Explain, then the explanation appearing in a pop-up.">
+        </figure>
+      </div>
+      <div class="wrap" style="margin-top: clamp(32px, 5vw, 56px)">
+        <div class="grid grid--3" style="grid-template-columns: repeat(auto-fit, minmax(min(100%, 340px), 1fr)); justify-items: center">
+          <figure class="shot" style="max-width: 380px">
+            <img src="assets/img/explain-popup.webp" width="572" height="669" loading="lazy" alt="The explanation pop-up for the selected text.">
+            <figcaption>The pop-up explains only the part you selected.</figcaption>
+          </figure>
+          <figure class="shot" style="max-width: 380px">
+            <img src="assets/img/explain-in-chat.webp" width="572" height="669" loading="lazy" alt="The selected text explained as the next message in the same chat.">
+            <figcaption>Or ask about it in the same chat.</figcaption>
+          </figure>
+        </div>
+      </div>
+    </section>
+
+    <!-- Getting started -->
+    <section class="section--alt" id="start">
+      <div class="wrap split">
+        <div>
+          <span class="eyebrow">Getting started</span>
+          <h2>Five steps to your first answer.</h2>
+          <ol class="ticks">
+            <li><strong>Pick your AI provider.</strong> Local: install LM Studio, download a model, then start the local server from its <em>Developer</em> tab. Hosted: create an API key at OpenRouter, Google AI Studio (Gemini) or Hugging Face.</li>
+            <li><strong>Run the installer</strong> and launch Open Local Assistant.</li>
+            <li><strong>Follow the setup wizard.</strong> It finds LM Studio, your microphones and speakers, and offers voice models that suit your hardware. Nothing is downloaded until you click <em>Download</em>.</li>
+            <li><strong>Using a hosted provider?</strong> Open Settings, then AI provider, choose the provider and paste your API key. The key is stored only on your PC.</li>
+            <li><strong>Press <kbd>Ctrl</kbd>+<kbd>Space</kbd></strong> and ask something.</li>
+          </ol>
+          <p class="note">Leave the model on <em>Auto</em> and the app uses the model already loaded in LM Studio. If none is loaded, it picks one that fits your GPU memory. You can pick a model yourself at any time.</p>
+        </div>
+        <div class="shots">
+          <figure class="shot">
+            <img src="assets/img/chat.webp" width="572" height="669" loading="lazy" alt="An empty chat window with starter prompts.">
+          </figure>
+          <figure class="shot">
+            <img src="assets/img/model-picker.webp" width="572" height="669" loading="lazy" alt="The model picker listing LM Studio models.">
+          </figure>
+        </div>
+      </div>
+    </section>
+
+    <!-- Settings -->
+    <section id="settings">
+      <div class="wrap">
+        <div class="section-head">
+          <span class="eyebrow">Settings at a glance</span>
+          <h2>Everything has a place, and you can change all of it.</h2>
+          <p>You can also change every keyboard shortcut in Settings, then Keyboard Shortcuts.</p>
+        </div>
+        <div class="gallery">
+          <figure class="shot">
+            <img src="assets/img/settings-ai-provider.webp" width="1009" height="752" loading="lazy" alt="AI provider settings.">
+            <figcaption><strong>AI provider:</strong> LM Studio or a hosted provider, API key, connection test, and a short display name for each model.</figcaption>
+          </figure>
+          <figure class="shot">
+            <img src="assets/img/settings-loaded-models.webp" width="1000" height="820" loading="lazy" alt="Loaded models settings.">
+            <figcaption><strong>Loaded models:</strong> see what is in memory, load or unload it, and choose what loads at startup.</figcaption>
+          </figure>
+          <figure class="shot">
+            <img src="assets/img/settings-assistant-voice.webp" width="1000" height="820" loading="lazy" alt="Assistant voice settings.">
+            <figcaption><strong>Assistant voice:</strong> one multilingual voice model for all languages, a voice for each language, speed, volume and the GPU pack.</figcaption>
+          </figure>
+          <figure class="shot">
+            <img src="assets/img/settings-dictation.webp" width="1009" height="752" loading="lazy" alt="Dictation settings.">
+            <figcaption><strong>Dictation:</strong> hotkey behaviour, typing or pasting, review before inserting, and grammar cleanup.</figcaption>
+          </figure>
+          <figure class="shot">
+            <img src="assets/img/settings-mcp-tools.webp" width="1009" height="752" loading="lazy" alt="MCP and Tools settings.">
+            <figcaption><strong>MCP &amp; Tools:</strong> add MCP servers or import them from LM Studio. Safe mode is on by default, so risky tools always ask before they run.</figcaption>
+          </figure>
+        </div>
+      </div>
+    </section>
+
+    <!-- Privacy -->
+    <section class="section--alt" id="privacy">
+      <div class="wrap split">
+        <div>
+          <span class="eyebrow">Privacy</span>
+          <h2>No account. No telemetry.</h2>
+          <p class="lead">Conversations, settings, API keys and logs are stored only on your PC. Nothing is sent anywhere except:</p>
+          <ul class="ticks">
+            <li>your messages to the AI provider you chose. With LM Studio they stay on your PC. With OpenRouter, Google Gemini or Hugging Face they go to that company's servers, and the app shows a notice saying so,</li>
+            <li>web searches, and only when the assistant uses the search tool,</li>
+            <li>model downloads, and only when you click <em>Download</em>.</li>
+          </ul>
+        </div>
+        <div>
+          <p class="lead" style="margin-top: 0">Speech recognition (including dictation) and the assistant's voice always run on your PC, whichever AI provider you use. Only the optional dictation grammar cleanup uses the AI model.</p>
+          <p class="note"><a href="https://github.com/kz370/OpenLocalAssistant/blob/master/PRIVACY.md">Read the full privacy policy</a>, including every service the app can connect to.</p>
+          <p class="note">Free software under the <a href="https://github.com/kz370/OpenLocalAssistant/blob/master/LICENSE">GNU General Public License v3.0</a>. You can use, study, change and share it.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Download -->
+    <section class="download" id="download">
+      <div class="wrap">
+        <div class="section-head">
+          <span class="eyebrow">Download</span>
+          <h2>Get Open Local Assistant <span data-version></span></h2>
+          <p>Windows 10 or 11, 64-bit, plus one AI provider: LM Studio with its local server on, or an API key from OpenRouter, Google Gemini or Hugging Face (free models are available).</p>
+          <div class="cta">
+            <a class="btn btn--primary" href="https://github.com/kz370/OpenLocalAssistant/releases/latest" data-dl="setup">Installer (recommended)</a>
+            <a class="btn" href="https://github.com/kz370/OpenLocalAssistant/releases/latest" data-dl="portable">Portable zip</a>
+          </div>
+          <p class="note">The installer puts the app in <code>C:\Program Files\Open Local Assistant</code> and adds a Start menu entry and an uninstaller. For the portable zip, extract the folder anywhere and keep the four <code>.dll</code> files next to the <code>.exe</code>.</p>
+        </div>
+
+        <div class="dl-grid">
+          <article class="card">
+            <h3>"Windows protected your PC"</h3>
+            <p>The builds are not code-signed yet, because a certificate costs money every year and this is a free app. Windows SmartScreen shows a warning. Click <strong>More info</strong>, then <strong>Run anyway</strong>. If you'd rather not, <a href="https://github.com/kz370/OpenLocalAssistant#building-from-source">build it yourself</a> from the code.</p>
+          </article>
+          <article class="card">
+            <h3>Verify your download</h3>
+            <p>Compare the SHA-256 hash of your file with the one in the <a href="https://github.com/kz370/OpenLocalAssistant/releases/latest" data-dl="sums">checksums file</a> on the release page. In PowerShell:</p>
+            <pre><code>Get-FileHash .\Open-Local-Assistant-&lt;version&gt;-setup.exe</code></pre>
+          </article>
+          <article class="card">
+            <h3>What PC do I need?</h3>
+            <p><strong>Hosted provider:</strong> almost any Windows 10 or 11 PC. <strong>Local models:</strong> roughly 16 GB of RAM for small models (3 to 4B). For 7 to 8B models, an NVIDIA GPU with 8 GB or more of video memory keeps replies fast. Voice features run on the CPU of any modern PC.</p>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <!-- Other projects -->
+    <div class="section--alt" style="border-top: 1px solid var(--line)" data-more-projects data-current="OpenLocalAssistant"></div>
+  </main>
+
+  <footer class="site-footer">
+    <div class="wrap">
+      <span>Open Local Assistant is free software, GPL-3.0. Made by <a href="https://github.com/kz370">kz370</a>.</span>
+      <nav aria-label="Project links">
+        <a href="https://github.com/kz370/OpenLocalAssistant">GitHub</a>
+        <a href="https://github.com/kz370/OpenLocalAssistant/releases">Releases</a>
+        <a href="https://github.com/kz370/OpenLocalAssistant/issues">Report a bug</a>
+        <a href="https://github.com/kz370/OpenLocalAssistant/blob/master/PRIVACY.md">Privacy</a>
+      </nav>
+    </div>
+  </footer>
+</body>
+</html>

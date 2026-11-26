@@ -39,9 +39,9 @@
 | **Rust (stable, MSVC)** | stable | **cargo 1.98.1 / rustc 1.98.1** (2026-08-05 / 2026-09-01) | Install from [rustup.rs](https://rustup.rs). On Windows the `stable-x86_64-pc-windows-msvc` toolchain is required — the GNU toolchain cannot link the Tauri/WebView2 stack. |
 | **C++ build tools** | MSVC build tools workload | — | Required by `windows`-crate consumers and by `sherpa-onnx`'s build script on a cold cache. |
 | **WebView2 Runtime** | Evergreen | preinstalled on Windows 11 | Already present on Windows 10 1803+ as an app, but not as an OS component. Without it the window never renders. |
-| **Inno Setup 6 or 7** | 6 | — | Only needed to produce `Open-Local-Assistant-<version>-setup.exe`. `build-installer.bat` **searches for 7 only**; see [§12](#12-known-gaps-and-gotchas). |
+| **Inno Setup 6 or 7** | 6 | — | Only needed to produce `Open-Local-Assistant-<version>-setup.exe`. `scripts\build-installer.bat` **searches for 7 only**; see [§12](#12-known-gaps-and-gotchas). |
 | **LM Studio** | optional | — | Required to actually chat locally. The app is fully usable with a hosted provider instead. |
-| **GitHub CLI (`gh`)** | optional | — | Required only by `scripts\upload-release.bat` and by the interactive upload prompt at the end of `build-installer.bat`. |
+| **GitHub CLI (`gh`)** | optional | — | Required only by `scripts\upload-release.bat` and by the interactive upload prompt at the end of `scripts\build-installer.bat`. |
 | **Python** | optional | — | Only to re-run `scripts/generate_icon.py`; the icon is committed. |
 
 **Platform.** Windows 10/11 x64 is the primary and only tested target. The Rust tree
@@ -75,7 +75,7 @@ sherpa-onnx-v1.13.8-win-x64-shared-MT-Release-lib.tar.bz2
 so the ONNX Runtime and sherpa-onnx DLLs are **dynamically** linked. That is what lets
 the optional NVIDIA CUDA pack replace them at launch (see `services::gpu`).
 
-Expect a long first build. `build-installer.bat` halves the parallelism so the machine
+Expect a long first build. `scripts\build-installer.bat` halves the parallelism so the machine
 stays usable, and CI overrides that with `BUILD_JOBS=%NUMBER_OF_PROCESSORS%`.
 
 ### The `.build-cache\sherpa-onnx` cache
@@ -88,7 +88,7 @@ copy:
 | --- | --- | --- |
 | `.build-cache\sherpa-onnx\sherpa-onnx-v<version>-win-x64-shared-MT-Release-lib.tar.bz2` | one archive per version | **git-ignored on purpose** — it must survive `cargo clean` |
 
-`build-installer.bat` manages it in three steps:
+`scripts\build-installer.bat` manages it in three steps:
 
 1. **Before the build** it reads the pinned version out of `src-tauri/Cargo.lock` with a
    regex (`name = "sherpa-onnx-sys"` / `version = "…"`), and if the matching archive is
@@ -104,7 +104,7 @@ copy:
 
 **If you run `cargo build` directly** (not through the batch file) the cache is not
 consulted and the archive is re-downloaded into `target/` on every clean. Use
-`build-installer.bat` for release builds, and accept the re-download during plain
+`scripts\build-installer.bat` for release builds, and accept the re-download during plain
 iteration.
 
 ### Runtime data directory
@@ -1200,16 +1200,16 @@ Plus, every time you update specs:
 
 ## 11. Packaging and release
 
-### 11.1 `build-installer.bat` — the single build entry point
+### 11.1 `scripts\build-installer.bat` — the single build entry point
 
 Used identically by developers and by CI. Four modes:
 
 | Invocation | Behaviour |
 | --- | --- |
-| `build-installer.bat` | Build the frontend + release exe + setup exe, then **offer** to publish as GitHub release `v<version>`. |
-| `build-installer.bat upload` | Same, but **upload without asking**. |
-| `build-installer.bat noupload` | Same, but **never ask**. **This is what CI uses.** |
-| `build-installer.bat install` | **Skip the installer entirely** and copy the app straight into `C:\Program Files\Open Local Assistant` (elevated). Copies *all* matching `sherpa-onnx|onnxruntime` DLLs, `icon.ico`, and creates a Start-menu shortcut. Kills any running instance first. |
+| `scripts\build-installer.bat` | Build the frontend + release exe + setup exe, then **offer** to publish as GitHub release `v<version>`. |
+| `scripts\build-installer.bat upload` | Same, but **upload without asking**. |
+| `scripts\build-installer.bat noupload` | Same, but **never ask**. **This is what CI uses.** |
+| `scripts\build-installer.bat install` | **Skip the installer entirely** and copy the app straight into `C:\Program Files\Open Local Assistant` (elevated). Copies *all* matching `sherpa-onnx|onnxruntime` DLLs, `icon.ico`, and creates a Start-menu shortcut. Kills any running instance first. |
 
 Phases:
 
@@ -1235,7 +1235,7 @@ embedded into the exe as-is).
 
 **Missing Inno Setup is a warning, not a failure**: it prints
 `[!] Inno Setup 7 not found, so no setup file was made.`, points at jrsoftware.org and
-at `build-installer.bat install`, and exits **0**.
+at `scripts\build-installer.bat install`, and exits **0**.
 
 ### 11.2 The `release/` layout — one folder per release, 5 portable files + 1 installer
 
@@ -1250,7 +1250,7 @@ release\
     Open-Local-Assistant-1.0.0-setup.exe            ← built by Inno Setup
 ```
 
-`build-installer.bat` reads the version from `src-tauri\Cargo.toml` and writes **every**
+`scripts\build-installer.bat` reads the version from `src-tauri\Cargo.toml` and writes **every**
 artifact to `release\v<version>\`, so rebuilding an old version never overwrites the current
 release's files. `scripts\upload-release.bat` reads the same folder (`release\v<version>\`) and still
 falls back to the flat `release\` layout for artifacts built before this change.
@@ -1312,7 +1312,7 @@ The maintainer checklist from `README.md`: write `release-notes\v<version>.md`, 
 - **Jobs:** `test` installs frontend dependencies and runs `npm run build` before
   Rust checks so Tauri's `generate_context!()` can find `src-tauri/../dist`, then
   runs formatting, Clippy, Rust tests, and frontend tests on `windows-latest`;
-  `build` runs the root `build-installer.bat noupload`, packages the
+  `build` runs the root `scripts\build-installer.bat noupload`, packages the
   five portable files, verifies the setup exe and writes SHA-256 checksums;
   `publish` runs only when a matching release tag is provided or selected and
   creates or updates the GitHub Release from those same build artifacts.
@@ -1322,8 +1322,19 @@ The maintainer checklist from `README.md`: write `release-notes\v<version>.md`, 
   `-SHA256SUMS.txt`. Notes use `release-notes/<tag>.md` when present and GitHub
   generated notes otherwise.
 
-`build-installer.bat` recognizes Inno Setup 6 and 7. The workflow verifies the exact
+`scripts\build-installer.bat` recognizes Inno Setup 6 and 7. The workflow verifies the exact
 setup exe before uploading or publishing, so a missing installer fails the build.
+
+### 11.5 Website deployment
+
+`.github/workflows/pages.yml` publishes `website/` to GitHub Pages
+(`https://kz370.github.io/OpenLocalAssistant/`). Its only trigger is pushing a tag whose
+name contains `website` or `page` (for example `git tag website-2026-11-26` then
+`git push origin website-2026-11-26`). Commits, pull requests, releases and `v<x.y.z>`
+tags never deploy it, and it has no manual trigger. Before deploying it checks that every
+`assets/` file referenced by `website/index.html` exists. One-time setup: Pages source =
+GitHub Actions, and the `github-pages` environment must allow the tag patterns
+`*website*` and `*page*`. See `website/README.md`.
 
 ---
 
@@ -1333,7 +1344,7 @@ Ordered by consequence.
 
 ### 12.1 Installer compiler selection
 
-`build-installer.bat` searches Inno Setup 7 and 6 locations, matching the workflow's
+`scripts\build-installer.bat` searches Inno Setup 7 and 6 locations, matching the workflow's
 Chocolatey installation and the Inno Setup 6 script. The release workflow also
 requires the exact versioned setup exe; it cannot succeed with only the portable
 files.
@@ -1374,7 +1385,7 @@ Cargo never deletes old build output, so `src-tauri/target` and `src-tauri/targe
 only grow. They reached **146 GB** on a real machine, which is what motivated two
 mitigations:
 
-- **`build-installer.bat` 8 GB cache guard.** Preflight measures both directories and
+- **`scripts\build-installer.bat` 8 GB cache guard.** Preflight measures both directories and
   runs `cargo clean` when they exceed `CACHE_LIMIT_GB` (default 8, overridable). The
   cost is a full ~10–15 minute rebuild next time.
 - **The dev profile in `Cargo.toml`:**

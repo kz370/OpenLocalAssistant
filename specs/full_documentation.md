@@ -211,7 +211,8 @@ The repository contains 22 logical modules.
 | 26 | Database | `src-tauri/src/database/` | Infrastructure | SQLite schema, migrations, conversation and message CRUD, FTS5 search, JSON export. |
 | 27 | Settings Store | `src-tauri/src/settings/` | Infrastructure | Typed settings registry, defaults, persistence, backup and restore. |
 | 28 | Desktop | `src-tauri/src/desktop/` | Infrastructure | Floating window placement and persistence, tray, global shortcuts, autostart, icon, install verification. |
-| 29 | Build & Release | `build-installer.bat`, `scripts/upload-release.bat`, `installer/*.iss`, `.github/workflows/build.yml` | Infrastructure | Portable/installer packaging, SHA-256 publishing, CI. |
+| 30 | Project Website | `website/index.html`, `website/assets/**`, `.github/workflows/pages.yml` | Infrastructure | Static GitHub Pages site, deployed only by pushing a tag whose name contains `website` or `page`. |
+| 29 | Build & Release | `scripts\build-installer.bat`, `scripts/upload-release.bat`, `installer/*.iss`, `.github/workflows/build.yml` | Infrastructure | Portable/installer packaging, SHA-256 publishing, CI. |
 
 ---
 
@@ -4074,7 +4075,7 @@ SearXNG.
 
 ---
 
-#### File: `/build-installer.bat`
+#### File: `/scripts/build-installer.bat`
 
 ### Purpose
 The single build entry point, used by both local developers and CI.
@@ -4121,7 +4122,7 @@ builds when a `v*` tag is pushed.
 ### Business Logic
 **Missing Inno Setup is a warning, not a failure:** it prints
 `[!] Inno Setup 7 not found, so no setup file was made.`, points at
-jrsoftware.org and at `build-installer.bat install`, then jumps to `:done` with
+jrsoftware.org and at `scripts\build-installer.bat install`, then jumps to `:done` with
 **exit code 0**.
 
 The `install` path writes a temporary PowerShell script that, with
@@ -4140,7 +4141,7 @@ real installer.
 #### File: `/scripts/upload-release.bat`
 
 ### Purpose
-Publishes a GitHub release from the files `build-installer.bat` staged in
+Publishes a GitHub release from the files `scripts\build-installer.bat` staged in
 `release\v<version>\` (artifacts built before the per-release folders existed); with no
 tag it takes the **newest** setup exe found anywhere under `release\` (PowerShell recursive
 `Get-ChildItem` sorted by `LastWriteTime`, because `dir /o-d /s` only sorts *within* each
@@ -4184,9 +4185,9 @@ The Inno Setup script that packages the built exe plus the four speech DLLs into
 per-machine Windows installer.
 
 ### Technical Details
-Receives four `/D` defines from `build-installer.bat`: `AppVersion`, `SourceExe`,
+Receives four `/D` defines from `scripts\build-installer.bat`: `AppVersion`, `SourceExe`,
 `LibDir`, `OutputDir`. Its header comment states Inno Setup 6, while
-`build-installer.bat` searches for **Inno Setup 7** (see the CI gap in §5).
+`scripts\build-installer.bat` searches for **Inno Setup 7** (see the CI gap in §5).
 
 ---
 
@@ -4208,7 +4209,7 @@ then `publish` (only when a matching release tag is selected or provided).
 | Step | Action | Detail |
 | --- | --- | --- |
 | Test | checkout, Node 22, Rust stable, `npm ci`, `npm run build`, Rust format/Clippy/tests, frontend tests | The frontend build creates the configured Tauri `frontendDist` (`../dist`) before Rust compilation. |
-| Build | install Inno Setup, validate tag/version, run `build-installer.bat noupload < NUL`, verify and package outputs | Requires the exact versioned setup exe and all five portable files; creates the portable ZIP and SHA-256 checksum list. |
+| Build | install Inno Setup, validate tag/version, run `scripts\build-installer.bat noupload < NUL`, verify and package outputs | Requires the exact versioned setup exe and all five portable files; creates the portable ZIP and SHA-256 checksum list. |
 | Publish | download this run's build artifact and create/update the GitHub Release | Only on pushed version tags; use `release-notes/<tag>.md` when present, otherwise generated notes. |
 
 With no `release_tag`, the manual path uploads the built release directory as an
@@ -4217,11 +4218,54 @@ build jobs check out that tag, and the publish job uploads the same build artifa
 without rebuilding it. Since this workflow intentionally has no `push` trigger,
 pushing a tag alone does not start a run.
 
-`build-installer.bat` searches for Inno Setup 7 and 6, so the setup compiler path
+`scripts\build-installer.bat` searches for Inno Setup 7 and 6, so the setup compiler path
 accepted by the workflow is also accepted by the local build script. Do not remove
 the frontend build from the test job: `tauri::generate_context!()` panics at compile
 time when the configured `../dist` directory is absent.
 archive is not restored between runs, so a cold runner re-downloads it.
+
+---
+
+#### File: `/.github/workflows/pages.yml`
+
+### Purpose
+Deploys the project website (`website/`) to GitHub Pages.
+
+### Technical Details
+Trigger: `push` of a tag matching `*website*` or `*page*`, and nothing else. There is
+no branch push, pull request, release or `workflow_dispatch` trigger, so version tags
+such as `v1.2.3` and ordinary commits never deploy the site. Permissions are
+`contents: read`, `pages: write`, `id-token: write`. One `deploy` job on
+`ubuntu-latest` in the `github-pages` environment: checkout, a check that
+`website/index.html` exists and that every `assets/...` path it references exists,
+staging of `website/` into `_site/` (without `README.md`, plus `.nojekyll`),
+`configure-pages`, `upload-pages-artifact`, `deploy-pages`. Concurrency group `pages`
+does not cancel a running deploy.
+
+### Business Rules
+Repository settings needed once: Pages source = GitHub Actions, and the
+`github-pages` environment must allow the tag patterns `*website*` and `*page*`,
+otherwise GitHub rejects a tag-started deployment.
+
+---
+
+#### File: `/website/index.html` (with `assets/css/site.css`, `assets/js/site.js`, `assets/more-projects/more-projects.js`, `website/README.md`)
+
+### Purpose
+Public one-page site for Open Local Assistant: hero, features, voice, right-click
+explain, getting started, settings gallery, privacy, download and a "Check my other
+projects" section (Open Local Server, Open Local Dictation).
+
+### Technical Details
+Static HTML/CSS/JS, no build step, no web fonts. `site.css` carries the app's graphite
+and teal tokens (dark by default, light via `prefers-color-scheme`). `site.js` calls
+the GitHub releases API from the visitor's browser and points the `data-dl="setup|portable|sums"`
+links and `data-version` badges at the newest release; on failure the links keep their
+Releases-page fallback, so no version is hard-coded. `more-projects.js` is the same
+reusable widget used by the Open Local Server site: it injects its own styles, reads the
+host's CSS variables, and hides the project named in `data-current`. Screenshots under
+`assets/img/` are copies of `docs/screenshots/*` and `docs/icon.webp`; image
+`width`/`height` attributes equal each file's pixel size. Copy comes from `README.md`.
 
 ---
 

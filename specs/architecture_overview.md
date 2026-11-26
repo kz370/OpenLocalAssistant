@@ -916,10 +916,10 @@ read them as new regressions.
    notice for an address that never leaves their LAN. Link-local
    (`169.254.0.0/16`) and IPv6 unique-local (`fc00::/7`) hosts are unhandled too.
 
-4. **CI installs Inno Setup 6 while `build-installer.bat` looks for 7.**
+4. **CI installs Inno Setup 6 while `scripts\build-installer.bat` looks for 7.**
    `.github/workflows/build.yml` checks for
    `${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe` before falling back to
-   `choco install innosetup`, whereas `build-installer.bat` searches only
+   `choco install innosetup`, whereas `scripts\build-installer.bat` searches only
    `Inno Setup 7\ISCC.exe` in four locations before falling back to `where iscc`.
    The README also says "Inno Setup 6". A CI build on a machine with only
    Inno Setup 6 therefore skips the setup file with a warning instead of failing
@@ -942,7 +942,7 @@ read them as new regressions.
    maintainer machine this can commit unrelated in-progress work, stray build
    output or anything else present in the working tree, and it is the only
    mutation path in the repository that bypasses per-file staging discipline.
-   `build-installer.bat upload` and `nupload` are safe; only this script is not.
+   `scripts\build-installer.bat upload` and `nupload` are safe; only this script is not.
 
 Additionally worth recording, though not a documentation/code contradiction:
 
