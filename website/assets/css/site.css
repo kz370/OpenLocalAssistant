@@ -102,7 +102,8 @@ kbd { border-bottom-width: 2px; white-space: nowrap; }
 .brand { display: flex; align-items: center; gap: 10px; color: var(--fg); font-weight: 650; text-decoration: none; letter-spacing: -0.01em; }
 .brand:hover { color: var(--fg); }
 .brand img { width: 30px; height: 30px; }
-.nav { display: flex; gap: 22px; margin-left: auto; }
+.nav { display: flex; align-items: center; gap: 22px; margin-left: auto; }
+.nav a, .nav .omp-menu__btn { line-height: 1.4; }
 .nav a { color: var(--fg-muted); text-decoration: none; font-size: 15px; font-weight: 500; }
 .nav a:hover { color: var(--fg); }
 
